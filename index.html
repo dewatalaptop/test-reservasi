@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Sistem Manajemen Dolan Sawah - Unified V6.0</title>
+
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="login-overlay">
+    <div class="login-box">
+      <div class="login-logo"><i class="fas fa-seedling"></i></div>
+      <h2>Admin Dolan Sawah</h2>
+      <p>Sistem Manajemen Terintegrasi (V6.0)</p>
+      <form onsubmit="event.preventDefault(); handleLogin();">
+        <input type="email" id="email" placeholder="Email Admin" required autocomplete="email">
+        <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+        <button type="submit"><i class="fas fa-sign-in-alt"></i> Masuk Dashboard</button>
+      </form>
+      <p id="login-error">Email atau password salah.</p>
+    </div>
+  </div>
+
+  <button id="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+  <div class="sidebar" id="sidebar">
+    <div class="brand"><i class="fas fa-leaf"></i> Dolan Sawah</div>
+    
+    <div class="nav-menu">
+      <div class="nav-label">Utama</div>
+      <div class="nav-item active" onclick="switchTab('dashboard')" id="nav-dashboard">
+        <i class="fas fa-th-large"></i> Dashboard
+      </div>
+      <div class="nav-item" onclick="switchTab('inbox')" id="nav-inbox">
+        <i class="fas fa-inbox"></i> Permintaan
+        <span class="badge" id="sidebar-badge">0</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('calendar')" id="nav-calendar">
+        <i class="far fa-calendar-alt"></i> Kalender Reservasi
+      </div>
+
+      <div class="nav-label">Manajemen</div>
+      <div class="nav-item" onclick="switchTab('data')" id="nav-data">
+        <i class="fas fa-database"></i> Data Master
+      </div>
+      <div class="nav-item" onclick="switchTab('broadcast')" id="nav-broadcast">
+        <i class="fas fa-bullhorn"></i> Broadcast Promo
+      </div>
+      
+      <div class="nav-label">Wawasan</div>
+      <div class="nav-item" onclick="switchTab('analysis')" id="nav-analysis">
+        <i class="fas fa-chart-pie"></i> Analisis Data
+      </div>
+    </div>
+    
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+    </div>
+  </div>
+
+  <div class="main-content" id="main-content">
+    
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p>Memproses Data...</p>
+    </div>
+
+    <div id="tab-dashboard" class="section active">
+      <div class="section-header">
+        <div>
+            <h2 class="section-title">Overview Hari Ini</h2>
+            <div class="section-subtitle" id="date-display">...</div>
+        </div>
+        <button class="btn btn-primary" onclick="initApp()"><i class="fas fa-sync-alt"></i> Refresh</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon icon-blue"><i class="fas fa-user-friends"></i></div>
+          <div class="stat-info"><h4>Tamu Hari Ini</h4><span class="value" id="stat-today-pax">0</span></div>
+        </div>
+        <div class="stat-card clickable" onclick="switchTab('inbox')">
+          <div class="stat-icon icon-orange"><i class="fas fa-envelope-open-text"></i></div>
+          <div class="stat-info"><h4>Pending Request</h4><span class="value" id="stat-pending">0</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-green"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-info"><h4>Reservasi Bulan Ini</h4><span class="value" id="stat-month-total">0</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-purple"><i class="fas fa-money-bill-wave"></i></div>
+          <div class="stat-info"><h4>Est. DP Masuk</h4><span class="value" id="stat-month-dp">Rp 0</span></div>
+        </div>
+      </div>
+      <div class="card">
+         <h3><i class="fas fa-history"></i> Reservasi Terbaru Masuk</h3>
+         <div id="recent-reservations-list"><p class="empty-state">Sedang memuat data...</p></div>
+         <div class="center-btn"><button class="btn btn-secondary" onclick="switchTab('calendar')">Lihat Semua di Kalender</button></div>
+      </div>
+    </div>
+
+    <div id="tab-inbox" class="section">
+      <div class="section-header">
+        <div><h2 class="section-title"><i class="fas fa-inbox"></i> Inbox Permintaan</h2></div>
+        <button class="btn btn-primary" onclick="initApp()"><i class="fas fa-sync"></i> Cek Data Baru</button>
+      </div>
+      <div id="inbox-container" class="request-grid"></div>
+    </div>
+
+    <div id="tab-calendar" class="section">
+      <div id="calendar-main-view">
+          <div class="section-header">
+            <div><h2 class="section-title"><i class="far fa-calendar-alt"></i> Kalender Reservasi</h2></div>
+            <div class="cal-nav">
+               <button class="btn btn-primary" onclick="navigateMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+               <span id="monthYear">...</span>
+               <button class="btn btn-primary" onclick="navigateMonth(1)"><i class="fas fa-chevron-right"></i></button>
+               <button class="btn btn-secondary" onclick="goToToday()"><i class="fas fa-calendar-day"></i></button>
+            </div>
+          </div>
+          <div class="calendar-wrapper">
+            <div class="calendar-header-row">
+                <div>Minggu</div><div>Senin</div><div>Selasa</div><div>Rabu</div><div>Kamis</div><div>Jumat</div><div>Sabtu</div>
+            </div>
+            <div id="calendar" class="calendar-grid"></div>
+          </div>
+      </div>
+
+      <div id="reservation-view-container" style="display: none;">
+        <div class="section-header header-blue">
+            <div><h2 class="section-title" id="reservation-view-title">Detail Tanggal</h2></div>
+            <button class="btn btn-danger" onclick="kembaliKeKalender()"><i class="fas fa-arrow-left"></i> Kembali</button>
+        </div>
+        <div class="card toolbar">
+            <div class="toolbar-actions">
+                <button class="btn btn-primary" onclick="showAddForm()"><i class="fas fa-plus-circle"></i> Tambah</button>
+                <div class="divider"></div>
+                <button class="btn btn-whatsapp" onclick="shareViaWhatsApp('day')"><i class="fab fa-whatsapp"></i> Share</button>
+                <button class="btn btn-secondary" onclick="shareViaEmail()"><i class="fas fa-envelope"></i> Email</button>
+                <button class="btn btn-info" onclick="printData()"><i class="fas fa-print"></i> Print</button>
+                <div class="spacer"></div>
+                <div class="search-box">
+                    <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari...">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+        </div>
+        <div id="reservation-detail-list" class="grid-list"></div>
+      </div>
+    </div>
+
+    <div id="tab-data" class="section">
+       <div class="section-header"><h2 class="section-title"><i class="fas fa-database"></i> Data Master</h2></div>
+       <div class="master-grid">
+         <div class="card">
+            <div class="card-header"><h3>🍴 Daftar Menu</h3><button class="btn btn-primary" onclick="showMenuManagement()">Kelola</button></div>
+            <div id="master-menu-preview"><p class="empty-state">Memuat...</p></div>
+         </div>
+         <div class="card">
+            <div class="card-header"><h3>📍 Daftar Tempat</h3><button class="btn btn-primary" onclick="showLocationManagement()">Kelola</button></div>
+            <div id="master-location-preview"><p class="empty-state">Memuat...</p></div>
+         </div>
+         <div class="card full-width">
+            <div class="card-header"><h3><i class="fas fa-address-book"></i> Database Pelanggan</h3><button class="btn btn-success" onclick="showCustomerMenu()">Lihat Semua</button></div>
+         </div>
+       </div>
+    </div>
+
+    <div id="tab-analysis" class="section">
+      <div class="section-header"><h2 class="section-title"><i class="fas fa-chart-line"></i> Analisis</h2><button class="btn btn-primary" onclick="showAnalysis()">Refresh</button></div>
+      <div class="card chart-container"><canvas id="mainChartCanvas"></canvas></div>
+      <div id="analysis-insights-container"></div>
+    </div>
+
+    <div id="tab-broadcast" class="section">
+        <div class="section-header"><h2 class="section-title"><i class="fas fa-bullhorn"></i> Broadcast Promo</h2></div>
+        <div class="card center-content">
+            <i class="fab fa-whatsapp big-icon"></i>
+            <h3>Kirim Promo Massal</h3>
+            <div class="action-row">
+                <button class="btn btn-info" onclick="showBroadcastSettings()">Atur Pesan</button>
+                <button class="btn btn-whatsapp" onclick="showBroadcastList()">Mulai Broadcast</button>
+            </div>
+        </div>
+    </div>
+
+  </div> <div class="overlay" id="overlay" onclick="closePopupAll()"></div>
+  
+  <div id="addFormPopup" class="popup-form">
+    <span class="close-btn" onclick="closePopup('addFormPopup')"><i class="fas fa-times"></i></span>
+    <h3>Input Reservasi</h3>
+    <form id="reservation-form">
+        <div class="form-row">
+            <div><label>Nama</label><input type="text" id="nama" required /><span class="err" id="nama-error"></span></div>
+            <div><label>WhatsApp</label><input type="tel" id="nomorHp" /><span class="err" id="nomorHp-error"></span></div>
+        </div>
+        <div class="form-row">
+            <div><label>Jam</label><input type="time" id="jam" required /></div>
+            <div><label>Jumlah</label><input type="number" id="jumlah" min="1" required /></div>
+        </div>
+        <div><label>Tempat</label><select id="tempat" required onchange="updateCapacityInfo('reservation-form')"></select><small id="capacity-info"></small></div>
+        
+        <div class="menu-box">
+            <label>Menu</label><div id="selected-menus-container"></div>
+            <button type="button" class="btn btn-secondary full-width" onclick="addMenuSelectionRow('reservation-form')">+ Tambah Menu</button>
+        </div>
+
+        <div class="form-row">
+            <div><label>DP (Rp)</label><input type="number" id="dp" value="0" /></div>
+            <div><label>Tipe DP</label><select id="tipeDp"><option value="">-</option><option>Cash</option><option>QRIS</option><option>Transfer BCA</option><option>Transfer Mandiri</option><option>Transfer BRI</option></select></div>
+        </div>
+        <label>Catatan</label><textarea id="tambahan"></textarea>
+        <div class="form-actions">
+            <button type="button" class="btn btn-primary flex-1" onclick="simpanReservasi()">Simpan</button>
+            <button type="button" class="btn btn-danger" onclick="closePopup('addFormPopup')">Batal</button>
+        </div>
+    </form>
+  </div>
+
+  <div id="editFormPopup" class="popup-form"></div>
+  <div id="menuManagementPopup" class="popup-form"></div>
+  <div id="locationManagementPopup" class="popup-form"></div>
+  <div id="customerListPopup" class="popup-form"></div>
+  <div id="printOptionsPopup" class="popup-form">
+      <span class="close-btn" onclick="closePopup('printOptionsPopup')"><i class="fas fa-times"></i></span>
+      <h3>Opsi Cetak</h3>
+      <div class="checkbox-grid">
+          <label><input type="checkbox" id="print-detail-menu" checked> Detail Menu</label>
+          <label><input type="checkbox" id="print-kontak" checked> No. HP</label>
+          <label><input type="checkbox" id="print-dp" checked> Info DP</label>
+          <label><input type="checkbox" id="print-tambahan" checked> Notes</label>
+      </div>
+      <button type="button" class="btn btn-primary full-width" onclick="executePrint()">Cetak</button>
+  </div>
+  <div id="broadcastSettingsPopup" class="popup-form">
+      <span class="close-btn" onclick="closePopup('broadcastSettingsPopup')"><i class="fas fa-times"></i></span>
+      <h3>Atur Pesan Broadcast</h3>
+      <textarea id="broadcastMessage" placeholder="Tulis pesan..." style="height:150px;"></textarea>
+      <button class="btn btn-primary full-width" onclick="saveBroadcastMessage()">Simpan</button>
+  </div>
+  <div id="broadcastListPopup" class="popup-form">
+      <span class="close-btn" onclick="closePopup('broadcastListPopup')"><i class="fas fa-times"></i></span>
+      <h3>Pilih Penerima</h3>
+      <input type="text" id="broadcastCustomerSearch" oninput="filterBroadcastCustomers(this.value)" placeholder="Cari...">
+      <div id="broadcast-customer-list" class="scrollable-list"></div>
+  </div>
+  <div id="exportDataPopup" class="popup-form">
+      <span class="close-btn" onclick="closePopup('exportDataPopup')"><i class="fas fa-times"></i></span>
+      <h3>Export Data</h3>
+      <textarea id="export-data-output" readonly></textarea>
+      <button class="btn btn-primary" onclick="copyExportCode()">Salin Kode</button>
+  </div>
+
+  <script src="app.js"></script>
+
+</body>
+</html>
