@@ -16,7 +16,7 @@ const firebaseConfig = {
   appId: "1:213151400721:web:e51b0d8cdd24206cf682b0"
 };
 
-// Inisialisasi Firebase (Safe Check)
+// Inisialisasi Firebase (Safe Check agar tidak error jika reload)
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 } else {
@@ -26,29 +26,29 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// Mengaktifkan persistensi login (agar tidak logout saat refresh)
+// Mengaktifkan persistensi login (User tetap login meski page di-refresh)
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
 
 
 /**
  * 2. VARIABEL GLOBAL (STATE MANAGEMENT)
- * Pusat penyimpanan data sementara agar aplikasi cepat dan reaktif.
+ * Pusat penyimpanan data sementara di memori browser.
  */
 
-// Konstanta
+// Konstanta Nama Bulan
 const monthNames = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 ];
 
-// --- Cache Data Transaksi ---
+// --- Cache Data Transaksi (Untuk Kinerja Cepat) ---
 let dataReservasi = {};       // Menyimpan data kalender (Key: "MM-DD", Value: Array Reservasi)
 let allReservationsList = []; // Array flat semua reservasi bulan ini (untuk statistik dashboard & search)
 let requestsCache = [];       // Menyimpan data inbox permintaan yang belum diapprove
 let allReservationsCache = null; // Cache berat untuk analisis tahunan (lazy load)
 
-// --- Cache Data Master ---
-let detailMenu = {};          // Key: Nama Menu, Value: Array Detail (misal: ["Pedas", "Manis"])
+// --- Cache Data Master (PENTING UNTUK TEMPLATE WA) ---
+let detailMenu = {};          // Key: Nama Menu, Value: Array Detail (misal: ["Nasi", "Ayam", "Teh"])
 let menuPrices = {};          // Key: Nama Menu, Value: Harga (Number)
 let locationsData = {};       // Key: ID Dokumen, Value: Object {name, capacity}
 
@@ -56,7 +56,7 @@ let locationsData = {};       // Key: ID Dokumen, Value: Object {name, capacity}
 let tanggalDipilih = '';      // Format "MM-DD" saat user klik tanggal
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
-let currentSortMode = 'jam';  // [NEW] Default mode sorting: 'jam', 'tempat', atau 'nama'
+let currentSortMode = 'jam';  // Default sorting: berdasarkan Jam
 
 // --- Listener Realtime (Disimpan untuk cleanup saat logout) ---
 let unsubscribeReservations = null;
@@ -79,7 +79,7 @@ const overlay = document.getElementById('overlay');
 
 /**
  * 3. SISTEM OTENTIKASI (AUTH)
- * Menangani logika Login, Logout, dan Transisi UI.
+ * Menangani logika Login, Logout, dan Transisi UI dengan animasi halus.
  */
 auth.onAuthStateChanged(user => {
     const loginContainer = document.getElementById('login-container');
@@ -93,10 +93,10 @@ auth.onAuthStateChanged(user => {
         if(loginContainer) loginContainer.style.display = 'none';
         if(appLayout) {
             appLayout.style.display = 'block';
-            // Efek Fade In halus
+            // Efek Fade In
             appLayout.style.opacity = 0;
             setTimeout(() => { 
-                appLayout.style.transition = 'opacity 0.5s'; 
+                appLayout.style.transition = 'opacity 0.6s ease'; 
                 appLayout.style.opacity = 1; 
             }, 50);
         }
@@ -104,10 +104,10 @@ auth.onAuthStateChanged(user => {
         // Update Tanggal di Header
         updateHeaderDate();
         
-        // Terapkan Background Custom (jika ada)
+        // Terapkan Background Custom (Fitur Baru)
         applySavedBackground();
         
-        // Mulai Load Data Aplikasi
+        // Mulai Load Data Aplikasi (Lanjut di Bagian 2)
         initializeApp(); 
         
     } else {
@@ -160,7 +160,7 @@ async function handleLogin() {
 }
 
 function handleLogout() { 
-    // Konfirmasi Logout
+    // Konfirmasi Logout menggunakan SweetAlert
     Swal.fire({
         title: 'Logout?',
         text: "Anda akan keluar dari dashboard admin.",
@@ -189,19 +189,19 @@ function cleanupApp() {
     dataReservasi = {};
     requestsCache = [];
     allReservationsList = [];
-    currentSortMode = 'jam'; // Reset sorting
+    currentSortMode = 'jam'; 
 }
 
 
 /**
  * 4. NAVIGASI UI (SIDEBAR & TABS)
- * Mengatur perpindahan halaman dashboard tanpa reload (SPA Feeling).
+ * Mengatur perpindahan halaman dashboard tanpa reload.
  */
 function switchTab(tabId) {
     // 1. Sembunyikan semua konten tab
     document.querySelectorAll('.content-section').forEach(el => {
         el.classList.remove('active');
-        el.style.display = 'none'; // Paksa display none untuk layout clean
+        el.style.display = 'none';
     });
 
     // 2. Tampilkan tab yang dipilih
@@ -373,7 +373,7 @@ async function initializeApp() {
     }
 
     // 2. Load Data Master (Parallel)
-    // Kita WAJIB memuat Menu (untuk harga) dan Lokasi (untuk kapasitas) 
+    // Kita WAJIB memuat Menu (untuk harga & rincian) dan Lokasi (untuk kapasitas) 
     // sebelum memuat data reservasi/inbox agar tidak ada error saat render.
     await Promise.all([
         loadMenus(),     // Mengisi detailMenu dan menuPrices
@@ -381,7 +381,7 @@ async function initializeApp() {
     ]);
 
     // 3. Setup Listeners Realtime (Data Transaksi)
-    // Fungsi ini ada di Bagian 3 dan 5, tapi dipanggil di sini
+    // Fungsi ini ada di Bagian 3, dipanggil di sini setelah data master siap
     if (typeof loadReservationsForCurrentMonth === 'function') {
         loadReservationsForCurrentMonth(); 
     }
@@ -390,7 +390,7 @@ async function initializeApp() {
     
     // 4. Setup Background Jobs
     if (typeof setupReliableNotificationChecker === 'function') {
-        setupReliableNotificationChecker(); 
+        setupReliableNotificationChecker(); // Ada di Bagian 5
     }
 
     console.log("System: Inisialisasi Selesai.");
@@ -406,6 +406,7 @@ async function initializeApp() {
 /**
  * 8. LOAD DATA MASTER (MENU & LOKASI)
  * Mengambil data referensi dari Firestore untuk validasi dan UI.
+ * PENTING: Data ini digunakan untuk menyusun pesan WA yang detail.
  */
 async function loadMenus() {
   try {
@@ -427,7 +428,7 @@ async function loadMenus() {
     snapshot.forEach(doc => {
         const data = doc.data();
         
-        // Simpan ke Cache Global (Penting untuk kalkulasi harga nanti)
+        // Simpan ke Cache Global (Penting untuk kalkulasi harga & detail WA)
         detailMenu[doc.id] = data.details || []; 
         menuPrices[doc.id] = data.price || 0;
         
@@ -526,7 +527,6 @@ function initInboxListener() {
             
         }, err => {
             console.error("Inbox Listener Error:", err);
-            // Jangan showToast error disini agar tidak spam jika koneksi putus-nyambung
         });
 }
 
@@ -644,8 +644,8 @@ function renderInboxUI() {
 
 
 /**
- * 10. FITUR CHAT WHATSAPP CERDAS
- * Menghitung total harga dan membuat template pesan konfirmasi otomatis.
+ * 10. FITUR CHAT WHATSAPP CERDAS (INBOX)
+ * Menghitung total harga dan membuat template pesan konfirmasi otomatis untuk pesanan baru.
  */
 function prepareInboxChat(id) {
     const r = requestsCache.find(item => item.id === id);
@@ -1054,7 +1054,7 @@ function applySort(mode) {
 
 /**
  * 17. RENDER LIST DETAIL (INTI TAMPILAN DATA)
- * Menampilkan kartu detail. Diperbaiki untuk mendukung Sorting & Chat Button.
+ * Menampilkan kartu detail. Diperbaiki untuk mendukung Sorting & Template Chat Baru.
  */
 function updateReservationList(reservations) {
     const container = document.getElementById('reservation-detail-list');
@@ -1086,14 +1086,16 @@ function updateReservationList(reservations) {
     });
     
     container.innerHTML = sortedRes.map(r => {
-        // Render Menu
+        // Render Menu (Versi Ringkas untuk Kartu UI)
         let menuItemsHtml = "<small style='color:#ccc; font-style:italic;'>Tidak ada menu</small>";
         
         if (Array.isArray(r.menus) && r.menus.length > 0) {
             menuItemsHtml = r.menus.map(item => {
+                // Kita tidak menampilkan rincian detail (nasi, ayam, dll) di kartu agar tidak terlalu panjang
+                // Detail lengkap hanya akan muncul di WhatsApp
                 const details = detailMenu[item.name] || [];
                 const detailStr = details.length > 0 
-                    ? `<span style="font-size:0.75rem; color:#888;"> (${details.join(', ')})</span>` 
+                    ? `<span style="font-size:0.75rem; color:#888;"> (${details.length} item)</span>` 
                     : '';
                 return `<div style="margin-bottom:4px;">
                             <b>${item.quantity}x</b> ${escapeHtml(item.name)}
@@ -1147,13 +1149,15 @@ function updateReservationList(reservations) {
             <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; border-top:1px solid rgba(0,0,0,0.05); padding-top:12px;">
                 
                 ${r.nomorHp ? `
-                <button class="btn-icon whatsapp" onclick="contactPersonal('${r.nomorHp}', '${escapeHtml(r.nama)}', '${r.date}', '${r.jam}', '${r.tempat}')" title="Chat WA">
+                <button class="btn-icon whatsapp" onclick="contactPersonal('${r.id}')" title="Chat WA">
                     <i class="fab fa-whatsapp"></i>
                 </button>` : ''}
                 
                 ${thanksBtn}
                 
-                <div style="flex:1;"></div> <button class="btn-icon" style="background:var(--text-muted); color:white;" onclick="editReservasi('${r.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <div style="flex:1;"></div> 
+                
+                <button class="btn-icon" style="background:var(--text-muted); color:white;" onclick="editReservasi('${r.id}')" title="Edit"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon danger" onclick="hapusReservasi('${r.id}')" title="Hapus"><i class="fas fa-trash"></i></button>
             </div>
         </div>`;
@@ -1668,7 +1672,7 @@ function updateCapacityInfo(formId) {
 }
 // ============================================================================
 // FILE: app.js
-// BAGIAN 5: MASTER DATA, BROADCAST, ANALISIS, SETTINGS & FIXES
+// BAGIAN 5: MASTER DATA, BROADCAST, ANALISIS, SETTINGS & WA LOGIC (FIXED)
 // ============================================================================
 
 /**
@@ -1686,10 +1690,10 @@ function showMenuManagement() {
           <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid rgba(0,0,0,0.05);">
               <h4 style="margin-top:0; color:var(--text-main); margin-bottom:10px;">Tambah Menu Baru</h4>
               <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:10px;">
-                 <input type="text" id="newMenuName" class="glass-input" placeholder="Nama Menu (Cth: Nasi Goreng)">
+                 <input type="text" id="newMenuName" class="glass-input" placeholder="Nama Menu (Cth: Paket G)">
                  <input type="number" id="newMenuPrice" class="glass-input" placeholder="Harga (Rp)">
               </div>
-              <textarea id="newMenuDetails" class="glass-input" placeholder="Detail/Varian (pisahkan koma). Cth: Pedas, Sedang" style="min-height:60px;"></textarea>
+              <textarea id="newMenuDetails" class="glass-input" placeholder="Detail isi menu (pisahkan koma). Cth: Nasi putih, Ayam bakar, Es Teh" style="min-height:80px;"></textarea>
               <button class="btn-primary-gradient full-width" onclick="addNewMenu()" style="margin-top:10px;">
                  <i class="fas fa-plus-circle"></i> Simpan Menu
               </button>
@@ -1736,31 +1740,40 @@ async function addNewMenu() {
     const detailsRaw = document.getElementById('newMenuDetails').value;
     
     if(!name) return showToast("Nama menu wajib diisi", "error");
-    if(detailMenu[name]) return showToast("Menu sudah ada", "error");
+    if(detailMenu[name]) return showToast("Menu dengan nama ini sudah ada", "error");
 
     const details = detailsRaw.split(',').map(s => s.trim()).filter(Boolean);
     
     showLoader();
     try {
         await db.collection('menus').doc(name).set({ details: details, price: isNaN(price) ? 0 : price });
-        showToast("Menu ditambahkan", "success");
-        await loadMenus(); renderManageMenuList();
+        showToast("Menu berhasil ditambahkan", "success");
+        await loadMenus(); renderManageMenuList(); // Refresh
+        
+        // Reset Input
         document.getElementById('newMenuName').value = '';
         document.getElementById('newMenuPrice').value = '';
         document.getElementById('newMenuDetails').value = '';
-    } catch(e) { console.error(e); showToast("Gagal menambah menu", "error"); } 
-    finally { hideLoader(); }
+    } catch(e) { 
+        console.error(e); 
+        showToast("Gagal menambah menu", "error"); 
+    } finally { 
+        hideLoader(); 
+    }
 }
 
 async function deleteMenu(name) {
-    if(!confirm(`Hapus menu "${name}"?`)) return;
+    if(!confirm(`Yakin ingin menghapus menu "${name}"?`)) return;
     showLoader();
     try {
         await db.collection('menus').doc(name).delete();
         showToast("Menu dihapus", "success");
         await loadMenus(); renderManageMenuList();
-    } catch(e) { showToast("Gagal hapus", "error"); } 
-    finally { hideLoader(); }
+    } catch(e) { 
+        showToast("Gagal menghapus menu", "error"); 
+    } finally { 
+        hideLoader(); 
+    }
 }
 
 
@@ -1788,8 +1801,10 @@ function showLocationManagement() {
           <h4 style="margin:0 0 10px 0;">Daftar Tempat</h4>
           <div id="manage-loc-list" style="max-height:300px; overflow-y:auto; border:1px solid rgba(0,0,0,0.05); border-radius:12px; background:white;"></div>
       </div>`;
+    
     renderManageLocList();
-    popup.style.display = 'block'; overlay.style.display = 'block';
+    popup.style.display = 'block'; 
+    overlay.style.display = 'block';
 }
 
 function renderManageLocList() {
@@ -1814,7 +1829,7 @@ async function addNewLocation() {
     if(!name || isNaN(cap) || cap < 1) return showToast("Data tidak valid", "error");
     
     const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    if(locationsData[id]) return showToast("Lokasi sudah ada", "error");
+    if(locationsData[id]) return showToast("ID Lokasi sudah ada", "error");
     
     showLoader();
     try {
@@ -1823,7 +1838,8 @@ async function addNewLocation() {
         await loadLocations(); renderManageLocList();
         document.getElementById('newLocName').value = '';
         document.getElementById('newLocCap').value = '';
-    } catch(e) { showToast("Gagal tambah lokasi", "error"); } finally { hideLoader(); }
+    } catch(e) { showToast("Gagal tambah lokasi", "error"); } 
+    finally { hideLoader(); }
 }
 
 async function deleteLocation(docId) {
@@ -1833,7 +1849,8 @@ async function deleteLocation(docId) {
         await db.collection('locations').doc(docId).delete();
         showToast("Lokasi dihapus", "success");
         await loadLocations(); renderManageLocList();
-    } catch(e) { showToast("Gagal hapus", "error"); } finally { hideLoader(); }
+    } catch(e) { showToast("Gagal hapus", "error"); } 
+    finally { hideLoader(); }
 }
 
 
@@ -2083,7 +2100,7 @@ function applySavedBackground() {
 
 
 /**
- * 32. BACKGROUND JOBS & FIXES (CHAT & REPORT)
+ * 32. BACKGROUND JOBS & LOGIKA WHATSAPP DETAIL (CHAT & LAPORAN)
  */
 function setupReliableNotificationChecker() {
     if (notificationInterval) clearInterval(notificationInterval);
@@ -2120,31 +2137,97 @@ function sendThankYouMessage(id, nm, hp) {
     if(btn) { btn.disabled=true; btn.style.opacity=0.5; }
 }
 
-// --- FIX: CHAT PERSONAL ---
-function contactPersonal(hp, nama, tgl, jam, tempat) {
-    if (!hp) return showToast("Nomor HP tidak valid", "error");
-    const msg = `Halo Kak *${nama}*,\n\nKami dari *Dolan Sawah* ingin mengkonfirmasi reservasi Kakak:\n📅 Tanggal: ${tgl}\n⏰ Jam: ${jam}\n📍 Tempat: ${tempat}\n\nMohon konfirmasinya ya Kak. Terima kasih! 🙏`;
-    window.open(`https://wa.me/${cleanPhoneNumber(hp)}?text=${encodeURIComponent(msg)}`, '_blank');
+// =======================================================
+// NEW: HELPER MENU DETAIL (Mengurai Paket Makanan)
+// =======================================================
+function formatMenuForWA(menus) {
+    if (!menus || !Array.isArray(menus) || menus.length === 0) return "  - (Belum ada menu)";
+    
+    return menus.map(m => {
+        let itemStr = `  - *${m.quantity}x ${m.name}*`;
+        
+        // Ambil rincian dari Global Data Master (detailMenu)
+        // detailMenu format: { "Paket G": ["Nasi Putih", "Kakap..."] }
+        if (detailMenu[m.name] && detailMenu[m.name].length > 0) {
+            const subItems = detailMenu[m.name].map(d => `      • ${d}`).join('\n');
+            itemStr += `\n${subItems}`;
+        }
+        
+        return itemStr;
+    }).join('\n');
 }
 
-// --- FIX: LAPORAN HARIAN ---
+// =======================================================
+// NEW: CHAT PERSONAL (Template Persis Permintaan)
+// =======================================================
+function contactPersonal(id) {
+    // Cari data berdasarkan ID di cache
+    let r = null;
+    for (const k in dataReservasi) {
+        const found = dataReservasi[k].find(x => x.id === id);
+        if (found) { r = found; break; }
+    }
+
+    if (!r) return showToast("Data tidak ditemukan", "error");
+    if (!r.nomorHp) return showToast("Tidak ada nomor HP", "error");
+
+    const menuText = formatMenuForWA(r.menus);
+    const dpStatusText = r.dp > 0 
+        ? `Rp ${formatRupiah(r.dp)} (via ${r.tipeDp || 'Transfer'}) (Sudah kami terima, terima kasih 🙏)`
+        : `Belum ada DP`;
+
+    const msg = `Halo Kak *${r.nama}* 👋,\n\n` +
+                `Kami dari *Dolan Sawah* ingin mengkonfirmasi reservasi Anda:\n\n` +
+                `🗓️ *Tanggal:* ${r.date}\n` +
+                `⏰ *Jam:* ${r.jam}\n` +
+                `📍 *Tempat:* ${r.tempat}\n` +
+                `👥 *Jumlah:* ${r.jumlah} orang\n\n` +
+                `🍽️ *Pesanan Menu:*\n${menuText}\n\n` +
+                `💰 *DP:* ${dpStatusText}\n\n` +
+                `Mohon balas pesan ini untuk konfirmasi. Kami tunggu kedatangannya ya! 😊`;
+
+    window.open(`https://wa.me/${cleanPhoneNumber(r.nomorHp)}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// =======================================================
+// NEW: LAPORAN HARIAN (Template Persis Permintaan)
+// =======================================================
 function shareViaWhatsApp(type) {
     if (type === 'day') {
         if (!tanggalDipilih) return showToast("Pilih tanggal dulu!", "error");
-        const list = dataReservasi[tanggalDipilih] || [];
-        if (list.length === 0) return showToast("Data kosong", "error");
         
-        let msg = `*LAPORAN RESERVASI DOLAN SAWAH*\n📅 ${tanggalDipilih}\n📊 Total: ${list.length} Grup\n============================\n\n`;
-        list.sort((a,b) => (a.jam||'').localeCompare(b.jam||'')).forEach((r, i) => {
-            let menu = r.menus ? r.menus.map(m=>`${m.quantity}x ${m.name}`).join(', ') : (r.menu||'-');
-            msg += `*${i+1}. ${r.nama}*\n⏰ ${r.jam} | 📍 ${r.tempat} | 👥 ${r.jumlah}\n🍽 ${menu}\n💰 ${r.dp>0?'DP OK':'No DP'}\n----------------------------\n`;
+        const list = dataReservasi[tanggalDipilih] || [];
+        if (list.length === 0) return showToast("Data kosong pada tanggal ini", "error");
+        
+        // Header
+        let msg = `*📋 LAPORAN RESERVASI DOLAN SAWAH 📋*\n\n` +
+                  `*Tanggal:* ${tanggalDipilih} ${monthNames[currentMonth]} ${currentYear}\n` +
+                  `=========================\n\n`;
+        
+        // Sortir berdasarkan jam
+        list.sort((a,b) => (a.jam||'').localeCompare(b.jam||''));
+
+        // Loop Data
+        list.forEach((r, i) => {
+            const menuText = formatMenuForWA(r.menus);
+            const dpText = r.dp > 0 ? `*Rp ${formatRupiah(r.dp)}* (${r.tipeDp || 'Transfer'})` : `*Belum DP*`;
+            const noteText = r.tambahan ? `📝 Tambahan: *${r.tambahan}*\n` : '';
+
+            msg += `*${i+1}. ${r.nama}*\n`;
+            msg += `⏰ Jam: *${r.jam}* | 📍 Tempat: *${r.tempat}* | 👥 Jumlah: *${r.jumlah} org*\n`;
+            msg += `🍽️ *Pesanan Menu:*\n${menuText}\n`;
+            msg += `💰 DP: ${dpText}\n`;
+            msg += `${noteText}`;
+            msg += `-------------------------\n\n`;
         });
+        
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     }
 }
 
+// Utilities Akhir
 function forceSync() { showLoader(); setTimeout(() => location.reload(), 800); }
 function toggleNotificationDropdown(e) { e.stopPropagation(); const d=document.getElementById('notification-dropdown'); d.style.display=d.style.display==='block'?'none':'block'; }
 window.addEventListener('click', () => { const d=document.getElementById('notification-dropdown'); if(d) d.style.display='none'; });
 
-console.log("Dolan Sawah App Loaded: Luxury Edition (Final).");
+console.log("Dolan Sawah App Loaded: Luxury Edition (Fixed).");
