@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Dolan Sawah Manager - Luxury Edition</title>
+  <title>Dolan Sawah Manager - Ultimate Edition</title>
 
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
@@ -51,8 +51,12 @@
   <div id="app-layout" style="display:none;">
     
     <div class="mobile-header glass-header">
-        <button id="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <button id="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        
         <span class="header-brand">Dolan Sawah</span>
+        
         <div class="header-actions-mobile">
             <div class="notif-icon" onclick="toggleNotificationDropdown(event)">
                 <i class="far fa-bell"></i>
@@ -84,7 +88,7 @@
           <i class="fab fa-whatsapp"></i> Broadcast WA
         </div>
         <div class="nav-item" onclick="switchTab('analysis')">
-          <i class="fas fa-chart-pie"></i> Analisis Data
+          <i class="fas fa-chart-line"></i> Analisis Bisnis
         </div>
         <div class="nav-item" onclick="switchTab('settings')">
           <i class="fas fa-cog"></i> Pengaturan
@@ -111,7 +115,10 @@
                 <span id="notification-badge" class="badge-count" style="display: none;">0</span>
                 
                 <div id="notification-dropdown" class="notification-dropdown glass-dropdown">
-                  <div class="dropdown-head">Pengingat "Say Thanks"</div>
+                  <div class="dropdown-head">
+                      Pengingat "Say Thanks"
+                      <button onclick="runNotificationCheck()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem;"><i class="fas fa-sync"></i></button>
+                  </div>
                   <ul id="notification-list-ul"></ul>
                 </div>
             </div>
@@ -178,8 +185,7 @@
         <div class="section-tools" style="margin-bottom: 20px;">
             <button class="btn-primary" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Inbox</button>
         </div>
-        <div id="inbox-container" class="grid-cards">
-            </div>
+        <div id="inbox-container" class="grid-cards"></div>
       </div>
 
       <div id="tab-calendar" class="content-section">
@@ -205,14 +211,10 @@
                     <h3 id="reservation-view-title">Detail Reservasi</h3>
                     
                     <div class="detail-actions">
-                        <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru">
-                            <i class="fas fa-plus"></i>
-                        </button>
+                        <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru"><i class="fas fa-plus"></i></button>
                         
                         <div class="dropdown-wrapper" style="position:relative; display:inline-block;">
-                            <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan Data">
-                                <i class="fas fa-sort-amount-down"></i>
-                            </button>
+                            <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan"><i class="fas fa-sort-amount-down"></i></button>
                             <div id="sort-dropdown" class="glass-dropdown" style="display:none; position:absolute; right:0; top:45px; width:150px; z-index:50;">
                                 <div class="notification-item" onclick="applySort('jam')"><i class="far fa-clock"></i> Waktu</div>
                                 <div class="notification-item" onclick="applySort('tempat')"><i class="fas fa-map-marker-alt"></i> Tempat</div>
@@ -220,17 +222,9 @@
                             </div>
                         </div>
 
-                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Kirim Laporan Harian">
-                            <i class="fab fa-whatsapp"></i>
-                        </button>
-                        
-                        <button class="btn-icon" onclick="printData()" title="Cetak">
-                            <i class="fas fa-print"></i>
-                        </button>
-                        
-                        <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Laporan WA"><i class="fab fa-whatsapp"></i></button>
+                        <button class="btn-icon" onclick="printData()" title="Print"><i class="fas fa-print"></i></button>
+                        <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
                 
@@ -263,7 +257,7 @@
             <div class="glass-panel full-width" style="grid-column: 1 / -1; padding: 20px;">
                  <div class="card-header" style="border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px; margin-bottom: 15px;"><h3>Tools Data</h3></div>
                  <div class="tools-container" style="display: flex; gap: 15px;">
-                    <button class="btn-action" style="padding: 10px 20px; flex-direction: row;" onclick="showExportDataPopup()"><i class="fas fa-file-code"></i> Backup Data</button>
+                    <button class="btn-action" style="padding: 10px 20px; flex-direction: row;" onclick="showExportDataPopup()"><i class="fas fa-file-code"></i> Backup Data (JSON)</button>
                  </div>
             </div>
         </div>
@@ -283,17 +277,60 @@
 
       <div id="tab-analysis" class="content-section">
         <div class="glass-panel" style="padding: 25px;">
-             <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3 style="margin:0;">Analisis Performa</h3>
-                <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 5px 10px;"></select>
+             <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0;"><i class="fas fa-chart-line"></i> Analisis Performa</h3>
+                <div style="display:flex; gap:10px;">
+                    <select id="anl-month-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
+                        <option value="all">Semua Bulan</option>
+                        </select>
+                    <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
+                        </select>
+                    <button class="btn-primary" onclick="runUIAnalysis()" style="width:auto;"><i class="fas fa-sync"></i></button>
+                </div>
              </div>
-             <div class="chart-container" style="height: 350px;">
-                 <canvas id="mainChart"></canvas>
+
+             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                 <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:16px;">
+                     <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Tren Kunjungan</h4>
+                     <div class="chart-container" style="height: 300px;">
+                         <canvas id="mainChart"></canvas>
+                     </div>
+                 </div>
+                 
+                 <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:16px;">
+                     <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Jam Sibuk (Peak Hours)</h4>
+                     <div class="chart-container" style="height: 300px;">
+                         <canvas id="hoursChart"></canvas>
+                     </div>
+                 </div>
              </div>
-             <div id="quick-insights" class="insights-row"></div>
-             <div class="center-btn" style="text-align:center; margin-top:20px;">
-                 <button class="btn-action" style="display:inline-flex; width:auto;" onclick="showAnalysis()">Analisis Detail</button>
+
+             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+                 <div class="glass-card" style="padding:20px;">
+                     <h4 style="margin-top:0;"><i class="fas fa-utensils"></i> Menu Terlaris</h4>
+                     <div class="chart-container" style="height: 250px; position:relative;">
+                         <canvas id="menuChart"></canvas>
+                     </div>
+                 </div>
+
+                 <div class="glass-card" style="padding:20px; overflow:hidden;">
+                     <h4 style="margin-top:0;"><i class="fas fa-crown" style="color:gold;"></i> Top Pelanggan Setia</h4>
+                     <div style="overflow-y:auto; max-height:250px;">
+                         <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                             <thead>
+                                 <tr style="background:rgba(0,0,0,0.03); color:var(--text-muted);">
+                                     <th style="padding:8px; text-align:left;">Nama</th>
+                                     <th style="padding:8px; text-align:center;">Kunjungan</th>
+                                 </tr>
+                             </thead>
+                             <tbody id="top-customer-table">
+                                 </tbody>
+                         </table>
+                     </div>
+                 </div>
              </div>
+
+             <div id="quick-insights" class="insights-row" style="margin-top:25px;"></div>
         </div>
       </div>
 
