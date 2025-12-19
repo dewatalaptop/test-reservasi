@@ -2,7 +2,9 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="theme-color" content="#059669"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
   <title>Dolan Sawah Manager - Ultimate Edition</title>
 
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -20,6 +22,44 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* REQUEST 1: Background Tidak Blur, Overlay Bening */
+    .bg-overlay-glass {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(0, 0, 0, 0.2) !important; /* Sedikit gelap agar text terbaca */
+    }
+    
+    /* Memastikan hanya panel konten yang memiliki efek blur */
+    .glass-panel, .glass-sidebar, .glass-header, .glass-card, .popup-glass, .glass-dropdown, .mobile-header {
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        background: rgba(255, 255, 255, 0.75) !important;
+    }
+
+    /* MOBILE ADVANCE TWEAKS */
+    @media (max-width: 768px) {
+        /* Sidebar Overlay untuk UX Mobile yang lebih cerdas */
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 999;
+            display: none; opacity: 0; transition: opacity 0.3s;
+            backdrop-filter: blur(4px);
+        }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+        
+        /* Typography Mobile */
+        h2 { font-size: 1.5rem !important; }
+        h3 { font-size: 1.2rem !important; }
+        
+        /* Tombol Mobile lebih ergonomis */
+        .btn-action, .stat-card { min-height: 100px; }
+        
+        /* Print Options di Mobile */
+        #printOptionsPopup { width: 95% !important; max-height: 85vh; }
+    }
+  </style>
 </head>
 <body>
 
@@ -50,12 +90,18 @@
 
   <div id="app-layout" style="display:none;">
     
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <div class="mobile-header glass-header">
-        <button id="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
-            <i class="fas fa-bars"></i>
-        </button>
-        
-        <span class="header-brand">Dolan Sawah</span>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button id="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="line-height: 1.1;">
+                <span class="header-brand" style="display:block; font-size:1.1rem;">Dolan Sawah</span>
+                <small style="font-size:0.75rem; color:var(--text-muted);" id="mobile-date-display">System Manager</small>
+            </div>
+        </div>
         
         <div class="header-actions-mobile">
             <div class="notif-icon" onclick="toggleNotificationDropdown(event)">
@@ -67,7 +113,12 @@
 
     <div class="sidebar glass-sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
+        </div>
+        <button class="close-sidebar-mobile" onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; display:none;">
+            <i class="fas fa-times"></i>
+        </button>
       </div>
       
       <div class="nav-menu">
@@ -96,6 +147,15 @@
       </div>
 
       <div class="sidebar-footer">
+        <div class="user-profile-mini" style="margin-bottom:15px; display:flex; align-items:center; gap:10px; padding:10px; background:rgba(255,255,255,0.4); border-radius:12px;">
+            <div style="width:35px; height:35px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div style="line-height:1;">
+                <small style="display:block; font-weight:700; color:var(--text-main);">Admin</small>
+                <small style="font-size:0.7rem; color:var(--text-muted);">Manager Access</small>
+            </div>
+        </div>
         <button class="btn-logout" onclick="handleLogout()">
             <i class="fas fa-sign-out-alt"></i> Keluar
         </button>
@@ -223,7 +283,7 @@
                         </div>
 
                         <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Laporan WA"><i class="fab fa-whatsapp"></i></button>
-                        <button class="btn-icon" onclick="printData()" title="Print"><i class="fas fa-print"></i></button>
+                        <button class="btn-icon" onclick="printData()" title="Print Laporan"><i class="fas fa-print"></i></button>
                         <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
@@ -282,9 +342,9 @@
                 <div style="display:flex; gap:10px;">
                     <select id="anl-month-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
                         <option value="all">Semua Bulan</option>
-                        </select>
+                    </select>
                     <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
-                        </select>
+                    </select>
                     <button class="btn-primary" onclick="runUIAnalysis()" style="width:auto;"><i class="fas fa-sync"></i></button>
                 </div>
              </div>
@@ -323,8 +383,7 @@
                                      <th style="padding:8px; text-align:center;">Kunjungan</th>
                                  </tr>
                              </thead>
-                             <tbody id="top-customer-table">
-                                 </tbody>
+                             <tbody id="top-customer-table"></tbody>
                          </table>
                      </div>
                  </div>
@@ -481,17 +540,50 @@
   </div>
 
   <div id="printOptionsPopup" class="popup-glass">
-    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Cetak Laporan</h3></div>
-    <div style="padding:20px;">
-        <div id="print-options-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
-            <label><input type="checkbox" id="print-detail-menu" checked> Rincian Menu</label>
-            <label><input type="checkbox" id="print-kontak" checked> Kontak</label>
-            <label><input type="checkbox" id="print-dp" checked> Info DP</label>
-            <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
+    <div class="popup-header" style="padding: 20px; background: linear-gradient(135deg, var(--primary), #3b82f6); color: white;">
+        <h3 style="margin:0;"><i class="fas fa-print"></i> Cetak Laporan</h3>
+    </div>
+    <div style="padding:25px;">
+        <p style="margin-bottom:20px; color:var(--text-muted); font-size:0.9rem;">Sesuaikan tampilan laporan yang akan dicetak.</p>
+        
+        <div style="margin-bottom:20px;">
+            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">1. Format Tampilan</label>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <label class="radio-box" style="border:1px solid #ccc; padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="printFormat" value="cards" checked> 
+                    <span><i class="fas fa-th-large" style="color:var(--primary);"></i> Kartu (Visual)</span>
+                </label>
+                <label class="radio-box" style="border:1px solid #ccc; padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="printFormat" value="table"> 
+                    <span><i class="fas fa-table" style="color:var(--primary);"></i> Tabel (Ringkas)</span>
+                </label>
+            </div>
         </div>
-        <div class="popup-foot" style="text-align:right;">
-            <button onclick="executePrint()" class="btn-primary">Print Preview</button>
-            <button onclick="closePopup('printOptionsPopup')" class="btn-action" style="width:auto;">Batal</button>
+
+        <div style="margin-bottom:20px;">
+            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">2. Urutan Data</label>
+            <select id="print-sort-by" class="glass-input">
+                <option value="time">Urut Waktu (Pagi - Malam)</option>
+                <option value="name">Urut Nama (A - Z)</option>
+                <option value="location">Urut Tempat</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:10px;">
+            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">3. Opsi Detail</label>
+            <div id="print-options-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <label><input type="checkbox" id="print-detail-menu" checked> Rincian Menu</label>
+                <label><input type="checkbox" id="print-kontak" checked> Kontak HP</label>
+                <label><input type="checkbox" id="print-dp" checked> Info DP</label>
+                <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
+            </div>
+        </div>
+
+        <div class="popup-foot" style="text-align:right; border-top:1px solid #eee; padding-top:15px;">
+            <button onclick="closePopup('printOptionsPopup')" class="btn-action" style="width:auto; margin-right:10px;">Batal</button>
+            <button onclick="executePrint()" class="btn-primary" style="width:auto;">
+                <i class="fas fa-print"></i> Print Preview
+            </button>
         </div>
     </div>
   </div>
