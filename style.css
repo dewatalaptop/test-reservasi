@@ -1,160 +1,271 @@
-/* =========================================
-   STYLE.CSS - EDISI RESTORASI VISUAL (V6.1)
-   ========================================= */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
 :root {
-  --primary: #2a9d8f;       /* Hijau Tosca Utama */
-  --primary-dark: #21867a;
-  --secondary: #264653;     /* Dark Blue */
-  --accent: #f4a261;        /* Orange (seperti tombol Logout di foto) */
-  --danger: #e76f51;        /* Merah Bata */
-  --bg-light: #f8f9fa;
-  --pill-bg: #e0f2f1;       /* Background Bubble Hijau Muda */
-  --pill-text: #00695c;     /* Text Bubble Hijau Tua */
-  --today-border: #f4a261;  /* Border Orange untuk Hari Ini */
-  --today-bg: #fff7ed;      /* Background Orange Muda untuk Hari Ini */
+  --primary: #2a9d8f; --primary-dark: #264653; --secondary: #e9c46a; --accent: #f4a261; --danger: #e76f51; --light: #f8f9fa; --dark: #343a40; --success: #28a745; --whatsapp: #25D366; --info: #0077b6;
 }
-
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
+* { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Poppins', sans-serif;
-  background-color: #f0f2f5;
-  margin: 0; padding: 0;
-  color: #333;
+  font-family: 'Poppins', sans-serif; margin: 0; background-color: #f5f5f5; color: var(--dark);
+  background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');
+  background-size: cover; background-attachment: fixed; background-position: center; min-height: 100vh;
 }
+/* Style untuk Fitur Broadcast */
+.broadcast-customer-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 8px; border-bottom: 1px solid #f0f0f0; }
+.broadcast-customer-item:last-child { border-bottom: none; }
+.broadcast-customer-item .customer-info { font-size: 0.95rem; }
+.broadcast-customer-item .customer-info small { display: block; color: #6c757d; font-size: 0.8rem; }
+.broadcast-customer-item .broadcast-btn { background-color: var(--accent); color: white; padding: 8px 15px; font-size: 0.85rem; margin-top: 0; min-width: 120px; text-align: center; }
+.broadcast-customer-item .broadcast-btn.sent { background-color: var(--success); cursor: default; }
 
-/* --- HEADER GRADIENT (SEPERTI SCREENSHOT) --- */
-.sidebar {
-  /* Di Mobile, sidebar kita sembunyikan agar fokus ke Kalender */
-  background: white; width: 280px; height: 100vh; position: fixed; 
-  left: -280px; top: 0; transition: 0.3s; z-index: 2000; box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+/* Notifikasi */
+.notification-item.completed .info { text-decoration: line-through; color: #888; }
+.notification-item.completed .status-icon { color: var(--success); margin-right: 8px; font-weight: 600; }
+.notification-item button:disabled { background-color: #6c757d; cursor: not-allowed; opacity: 0.7; }
+
+body::before {
+  content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(255, 255, 255, 0.85); z-index: -1;
 }
-.sidebar.open { left: 0; }
-
-/* Header Asli Dolan Sawah */
-.main-header-banner {
-  background: linear-gradient(135deg, #264653, #2a9d8f);
-  color: white;
-  padding: 30px 20px 50px 20px; /* Padding bawah besar untuk efek overlap */
-  text-align: center;
-  position: relative;
-  border-bottom-left-radius: 20px;
-  border-bottom-right-radius: 20px;
-  margin-bottom: -40px; /* Efek overlap */
+header {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary)); color: white; padding: 25px 20px; text-align: center; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); position: relative; overflow: hidden;
 }
-
-.main-header-banner h2 { margin: 0; font-size: 1.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; }
-.main-header-banner p { margin: 5px 0 0 0; opacity: 0.9; font-size: 0.9rem; font-weight: 300; }
-
-/* Tombol Logout & Lonceng di Header */
-.header-actions-top { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; align-items: center; }
-.btn-logout-header { background: var(--danger); color: white; border: none; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-.bell-icon { font-size: 1.2rem; color: white; cursor: pointer; }
-
-/* Hamburger Menu (Putih) */
-#mobile-toggle { 
-  position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,0.2); border: none; 
-  color: white; width: 40px; height: 40px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; 
+header::after {
+  content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px;
+  background: linear-gradient(90deg, var(--secondary), var(--accent));
 }
-
-/* --- CONTAINER UTAMA --- */
-.main-content { padding: 0 15px 30px 15px; max-width: 800px; margin: 0 auto; }
-
-/* --- KALENDER (CARD STYLE) --- */
-.calendar-wrapper {
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-  padding: 25px;
-  position: relative;
-  margin-top: 10px;
+header h2 { font-size: 2.2rem; margin-bottom: 5px; font-weight: 600; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2); }
+header small { display: block; font-size: 0.8rem; margin-top: 5px; color: rgba(255, 255, 255, 0.8); font-weight: 300; }
+.container {
+  max-width: 1200px; margin: 30px auto; padding: 20px; background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 10px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); display: none;
 }
-
-/* Navigasi Bulan */
-.calendar-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 25px; }
-.month-label { font-size: 1.5rem; font-weight: 700; color: var(--secondary); margin-bottom: 15px; }
-.nav-buttons { display: flex; gap: 10px; }
-.nav-btn { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; transition: 0.2s; }
-.nav-btn.today { width: auto; padding: 0 20px; background: #6c757d; font-weight: 500; font-size: 0.9rem; }
-.nav-btn:active { transform: scale(0.95); }
-
-/* Grid Kalender */
-.calendar-days-header {
-  display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;
-  font-weight: 700; color: var(--secondary); margin-bottom: 10px; font-size: 0.9rem;
+#login-container {
+  max-width: 400px; margin: 50px auto; padding: 30px; background: white; border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align: center; border-top: 5px solid var(--primary);
 }
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
-
-/* KOTAK TANGGAL (The Important Part) */
-.cal-day {
-  aspect-ratio: 1/1.2; /* Membuatnya agak persegi panjang vertikal */
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 4px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
-  border: 2px solid transparent; /* Persiapan border */
+#login-error { color: var(--danger); margin-top: 15px; font-weight: 500; display: none; }
+#logout-button {
+    position: fixed; top: 20px; right: 20px; z-index: 1001; background-color: var(--danger);
+    color: white; border: none; padding: 8px 15px; border-radius: 20px; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: none;
 }
+.calendar-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+.month-year { font-size: 1.5rem; font-weight: 600; color: var(--primary-dark); text-align: center; margin-bottom: 10px; }
+.calendar-nav { display: flex; gap: 10px; }
+.calendar-nav button { background-color: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 5px; }
+.calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: 600; margin-bottom: 10px; color: var(--primary-dark); }
+.calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
 
-/* Efek Hover & Aktif */
-.cal-day:active { transform: scale(0.95); }
-
-/* Tanggal Biasa */
-.day-number { font-size: 1rem; font-weight: 600; color: #444; margin-top: 5px; }
-
-/* INDIKATOR JUMLAH (THE GREEN PILL) */
-.res-pill {
-  background-color: var(--pill-bg);
-  color: var(--pill-text);
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 4px 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 5px;
+.calendar-day {
+  min-height: 90px; padding: 5px; background-color: white; border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); position: relative;
+  border: 2px solid transparent; transition: all 0.2s ease-in-out; cursor: pointer;
 }
-
-/* HARI INI (Style Orange seperti Screenshot) */
-.cal-day.today {
-  border: 2px solid var(--today-border);
-  background-color: var(--today-bg);
-}
-.cal-day.today .day-number {
-  background: var(--accent);
-  color: white;
-  width: 28px; height: 28px;
+.calendar-day:not(.selected):hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.day-number {
+  font-weight: 600; font-size: 0.9rem; color: var(--dark); position: absolute;
+  top: 6px; right: 8px; transition: all 0.3s ease; width: 28px; height: 28px;
   display: flex; align-items: center; justify-content: center;
+}
+.reservation-count {
+  position: absolute; bottom: 8px; left: 8px; background-color: rgba(42, 157, 143, 0.15);
+  color: var(--primary-dark); width: auto; min-width: 22px; height: 22px; padding: 0 8px;
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 600;
+}
+.calendar-day.today { border-color: var(--accent); background-color: #fffaf0; }
+.today .day-number { background-color: var(--accent); color: white; border-radius: 50%; }
+.selected { background-color: var(--primary) !important; border-color: var(--primary-dark) !important; color: white; }
+.selected .day-number { color: white; background-color: transparent; }
+.selected .reservation-count { background-color: white; color: var(--primary); }
+
+.popup-form { 
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+    z-index: 1000; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto;
+    background-color: white; padding: 25px; border-radius: 8px; 
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08); border-top: 4px solid var(--primary);
+}
+
+button { background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 10px; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+button:hover { background-color: var(--primary-dark); }
+button.secondary { background-color: #6c757d; color: white; }
+button.secondary:hover { background-color: #5a6268; }
+button.danger { background-color: var(--danger); }
+button.whatsapp { background-color: var(--whatsapp); }
+button.accent { background-color: var(--accent); color: white; }
+button.info { background-color: var(--info); }
+button.info:hover { background-color: #005f8d; }
+
+footer { text-align: center; font-size: 0.8rem; color: white; background-color: var(--primary-dark); padding: 15px; margin-top: 40px; }
+.menu-detail { margin-top: 8px; font-size: 0.85rem; color: #555; background-color: rgba(233, 196, 106, 0.1); padding: 8px; border-radius: 5px; border-left: 3px solid var(--secondary); }
+label { display: block; margin-bottom: 10px; font-weight: 500; color: var(--primary-dark); }
+input, select, textarea { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ddd; margin-top: 5px; font-family: 'Poppins', sans-serif; }
+textarea { min-height: 80px; }
+.reservation-item { padding: 15px; margin-bottom: 15px; background-color: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); border-left: 4px solid var(--primary); }
+.reservation-details { flex-grow: 1; width: 100%; }
+.action-buttons { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+.action-buttons button { flex: 1 1 auto; min-width: 0; }
+.data-transfer { margin-top: 25px; background-color: white; padding: 20px; border-radius: 8px; display: none; }
+.whatsapp-options-container, .sort-options-container { position: relative; display: inline-block; width: 100%; }
+.whatsapp-options, .sort-options { position: absolute; bottom: 100%; left: 0; width: 100%; margin-bottom: 5px; padding: 15px; border-radius: 8px; z-index: 10; display: none; background-color: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+.data-actions { display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap; width: 100%; }
+.data-actions button { flex-grow: 1; padding: 8px 10px; font-size: 0.85rem; margin-top: 0; }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.header-actions button { margin-top: 0; }
+
+.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 999; display: none; }
+.search-container { position: relative; margin: 0 auto 20px; max-width: 600px; width: 100%; }
+.search-container input { padding-left: 35px; border-radius: 30px; border: 2px solid var(--primary); }
+.search-container i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--primary); }
+#menu-list-container, #location-list-container, #customer-list { max-height: 300px; overflow-y: auto; padding-right: 10px; margin-bottom: 20px; }
+.menu-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+.menu-item-actions button { padding: 5px 10px; font-size: 0.8rem; margin-top: 0; margin-left: 5px; }
+#add-menu-form, #add-location-form { margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--primary); }
+.loading-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 2000; 
+  display: flex; justify-content: center; align-items: center; display: none;
+}
+.spinner {
+  width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: var(--dark); color: white; padding: 12px 24px;
+  border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1001; display: none;
+}
+.toast.error { background-color: var(--danger); }
+.toast.success { background-color: var(--success); }
+.toast.info { background-color: var(--primary); }
+.invalid { border-color: var(--danger) !important; }
+.error-message { color: var(--danger); font-size: 0.8rem; margin-top: 3px; display: block; min-height: 1.2em; }
+
+.print-options-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0;
+}
+.print-options-grid label {
+    display: flex; align-items: center; gap: 8px; font-weight: 400;
+    background-color: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #eee;
+}
+.print-options-grid input[type="checkbox"] { width: auto; margin-top: 0; }
+
+#analysis-filters { text-align: center; margin-bottom: 15px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#analysis-filters button { margin-top: 0; padding: 6px 12px; font-size: 0.85rem; }
+#analysis-filters button.active { background-color: var(--primary-dark); color: white; }
+.analysis-section { margin-bottom: 25px; }
+.analysis-section h4 { color: var(--primary-dark); border-bottom: 2px solid var(--secondary); padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.analysis-list { list-style: none; padding-left: 0; }
+.analysis-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+.analysis-item:last-child { border-bottom: none; }
+.analysis-item .name { font-weight: 500; }
+.analysis-item .name-clickable { font-weight: 500; cursor: pointer; color: var(--primary); text-decoration: underline; }
+.analysis-item .name-clickable:hover { color: var(--primary-dark); }
+.analysis-item .value { font-weight: 600; color: var(--primary); background-color: rgba(42, 157, 143, 0.1); padding: 3px 8px; border-radius: 12px; font-size: 0.85rem; }
+
+/* Styles for new multi-menu feature */
+.menu-selection-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.menu-selection-row .menu-select { flex: 3; }
+.menu-selection-row .quantity-input { flex: 1; }
+.menu-selection-row .remove-btn { flex: 0 0 auto; background-color: var(--danger); padding: 8px 12px; margin-top: 0; }
+#add-menu-btn { margin-top: 5px; margin-bottom: 15px; padding: 8px 15px; font-size: 0.9rem; }
+#capacity-info { font-size: 0.8rem; color: #555; display: block; margin-top: 4px; font-weight: 400; }
+
+#customer-profile-view { padding: 10px; }
+#customer-profile-view h4 { font-size: 1.3rem; margin-bottom: 15px; color: var(--primary-dark); }
+.profile-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.stat-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border-left: 4px solid var(--secondary); }
+.stat-card .value { font-size: 1.5rem; font-weight: 600; color: var(--primary-dark); }
+.stat-card .label { font-size: 0.8rem; color: #666; }
+.profile-history { max-height: 250px; overflow-y: auto; padding-right: 10px; }
+.history-item { padding: 8px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+
+#notification-bell-container {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 80px;
+  cursor: pointer;
+}
+#notification-bell-container .fa-bell {
+  font-size: 1.8rem;
+  color: white;
+}
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -10px;
+  background-color: var(--danger);
+  color: white;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  margin-top: 2px;
-  font-size: 0.9rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 2px solid var(--primary-dark);
 }
-
-/* HARI TERPILIH */
-.cal-day.selected {
-  background-color: var(--primary);
-  border-color: var(--primary-dark);
-  box-shadow: 0 5px 15px rgba(42, 157, 143, 0.4);
+.notification-list-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 15px);
+  right: 0;
+  width: 320px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  z-index: 1600;
+  color: var(--dark);
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #eee;
 }
-.cal-day.selected .day-number { color: white; }
-.cal-day.selected .res-pill { background: white; color: var(--primary); }
+.notification-list-dropdown h4 {
+  padding: 12px 15px;
+  margin: 0;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  font-size: 0.95rem;
+  color: var(--primary-dark);
+}
+.notification-list-dropdown ul {
+  list-style: none;
+  padding: 8px;
+  margin: 0;
+}
+.notification-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background-color: white;
+  border-radius: 6px;
+  border-left: 4px solid var(--secondary);
+}
+.notification-item:hover { background-color: #f8f9fa; }
+.notification-item .info { display: block; font-size: 0.9rem; margin-bottom: 10px; }
+.notification-item .info strong { color: var(--primary-dark); }
+.notification-item button { width: 100%; margin: 0; padding: 8px; font-size: 0.9rem; }
 
-/* --- LOGIN & MODAL (Tetap Rapi) --- */
-#login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--secondary), var(--primary)); z-index: 9999; display: flex; justify-content: center; align-items: center; }
-.login-box { background: white; padding: 40px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
-.popup-form { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2200; width: 90%; max-width: 500px; max-height: 85vh; overflow-y: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 25px 50px rgba(0,0,0,0.25); }
-.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2100; display: none; backdrop-filter: blur(2px); }
-
-/* Utilities Button & Input */
-input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; margin: 8px 0 15px 0; font-family: inherit; }
-.btn-primary { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+@media (max-width: 480px) { 
+  .action-buttons, .data-actions { flex-direction: column; } 
+  .action-buttons button, .data-actions button { width: 100%; }
+}
+.analysis-controls {
+  display: flex; gap: 10px; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ddd;
+}
+.analysis-controls select { margin-top: 0; border: 1px solid #ccc; }
+.chart-container {
+  background: white; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px; height: 300px; position: relative;
+}
+.insight-box {
+  background-color: #e3f2fd; border-left: 5px solid #2196f3; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5;
+}
+.insight-box h5 { color: #0d47a1; margin-bottom: 8px; font-size: 1rem; }
+.insight-box ul { padding-left: 20px; margin: 0; }
+.insight-box li { margin-bottom: 5px; }
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px;
+}
+.mini-stat {
+  background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 3px solid var(--primary);
+}
+.mini-stat .val { font-size: 1.4rem; font-weight: 700; color: var(--dark); }
+.mini-stat .lbl { font-size: 0.8rem; color: #666; }
