@@ -16,7 +16,7 @@ const firebaseConfig = {
   appId: "1:213151400721:web:e51b0d8cdd24206cf682b0"
 };
 
-// Inisialisasi Firebase (Safe Check agar tidak error jika reload)
+// Inisialisasi Firebase (Safe Check)
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 } else {
@@ -26,50 +26,54 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// Mengaktifkan persistensi login (User tetap login meski page di-refresh)
+// Mengaktifkan persistensi login (agar tidak logout saat refresh)
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
 
 
 /**
  * 2. VARIABEL GLOBAL (STATE MANAGEMENT)
- * Pusat penyimpanan data sementara di memori browser.
+ * Pusat penyimpanan data sementara agar aplikasi cepat dan reaktif.
  */
 
-// Konstanta Nama Bulan
+// Konstanta
 const monthNames = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 ];
 
-// --- Cache Data Transaksi (Untuk Kinerja Cepat) ---
-let dataReservasi = {};       // Menyimpan data kalender (Key: "MM-DD", Value: Array Reservasi)
-let allReservationsList = []; // Array flat semua reservasi bulan ini (untuk statistik dashboard & search)
-let requestsCache = [];       // Menyimpan data inbox permintaan yang belum diapprove
-let allReservationsCache = null; // Cache berat untuk analisis tahunan (lazy load)
+// --- Cache Data Transaksi ---
+let dataReservasi = {};       // Data Kalender (Key: "MM-DD", Value: Array)
+let allReservationsList = []; // Flat list bulan aktif (Dashboard)
+let requestsCache = [];       // Inbox Request
+let allReservationsCache = null; // Cache Global untuk Analisis (Lazy Load)
 
-// --- Cache Data Master (PENTING UNTUK TEMPLATE WA) ---
-let detailMenu = {};          // Key: Nama Menu, Value: Array Detail (misal: ["Nasi", "Ayam", "Teh"])
-let menuPrices = {};          // Key: Nama Menu, Value: Harga (Number)
-let locationsData = {};       // Key: ID Dokumen, Value: Object {name, capacity}
+// --- Cache Data Master (Penting untuk WA Detail) ---
+let detailMenu = {};          // { "Paket G": ["Nasi", "Kakap", ...] }
+let menuPrices = {};          // { "Paket G": 50000 }
+let locationsData = {};       // { "Lantai 1": {capacity: 20} }
 
 // --- State Navigasi & Kalender ---
-let tanggalDipilih = '';      // Format "MM-DD" saat user klik tanggal
+let tanggalDipilih = '';      // Format "MM-DD"
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
-let currentSortMode = 'jam';  // Default sorting: berdasarkan Jam
+let currentSortMode = 'jam';  // Default sorting
 
-// --- Listener Realtime (Disimpan untuk cleanup saat logout) ---
+// --- State Analisis Data (NEW) ---
+let analysisYear = new Date().getFullYear();
+let analysisMonth = 'all'; // 'all' atau index 0-11
+
+// --- Listener Realtime ---
 let unsubscribeReservations = null;
 let unsubscribeRequests = null;
 
 // --- State Fitur Tambahan ---
-let hasAutoOpened = false;       // Mencegah auto-popup berulang saat deep link
-let notificationInterval = null; // Interval cek pengingat "Say Thanks"
-let promoMessageCache = null;    // Template pesan broadcast
-let allCustomersCache = [];      // Data unik customer untuk broadcast
+let hasAutoOpened = false;       // Deep link flag
+let notificationInterval = null; // Interval notifikasi
+let promoMessageCache = null;    
+let allCustomersCache = [];      // Cache pelanggan unik
 
-const BROADCAST_MESSAGE_KEY = 'dolanSawahBroadcastMessage'; // LocalStorage Key
-const BG_STORAGE_KEY = 'dolanSawahBg'; // Key untuk setting background custom
+const BROADCAST_MESSAGE_KEY = 'dolanSawahBroadcastMessage'; 
+const BG_STORAGE_KEY = 'dolanSawahBg'; 
 
 // --- Referensi DOM Global ---
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -79,7 +83,6 @@ const overlay = document.getElementById('overlay');
 
 /**
  * 3. SISTEM OTENTIKASI (AUTH)
- * Menangani logika Login, Logout, dan Transisi UI dengan animasi halus.
  */
 auth.onAuthStateChanged(user => {
     const loginContainer = document.getElementById('login-container');
@@ -89,11 +92,9 @@ auth.onAuthStateChanged(user => {
         // --- USER LOGIN ---
         console.log("Auth: User terhubung (" + user.email + ")");
         
-        // Transisi Tampilan: Sembunyikan Login, Tampilkan Dashboard
         if(loginContainer) loginContainer.style.display = 'none';
         if(appLayout) {
             appLayout.style.display = 'block';
-            // Efek Fade In
             appLayout.style.opacity = 0;
             setTimeout(() => { 
                 appLayout.style.transition = 'opacity 0.6s ease'; 
@@ -101,14 +102,9 @@ auth.onAuthStateChanged(user => {
             }, 50);
         }
         
-        // Update Tanggal di Header
         updateHeaderDate();
-        
-        // Terapkan Background Custom (Fitur Baru)
-        applySavedBackground();
-        
-        // Mulai Load Data Aplikasi (Lanjut di Bagian 2)
-        initializeApp(); 
+        applySavedBackground(); // Load background custom
+        initializeApp();        // Mulai load data
         
     } else {
         // --- USER LOGOUT ---
@@ -116,8 +112,6 @@ auth.onAuthStateChanged(user => {
         
         if(loginContainer) loginContainer.style.display = 'flex';
         if(appLayout) appLayout.style.display = 'none';
-        
-        // Bersihkan data dan listener untuk keamanan memori
         cleanupApp();
     }
 });
@@ -130,7 +124,6 @@ async function handleLogin() {
   const email = emailInput.value.trim();
   const password = passwordInput.value;
   
-  // Validasi Input
   if (!email || !password) { 
       errorEl.textContent = 'Email dan password wajib diisi.'; 
       errorEl.style.display = 'block'; 
@@ -138,10 +131,8 @@ async function handleLogin() {
   }
   
   showLoader();
-  
   try { 
       await auth.signInWithEmailAndPassword(email, password); 
-      // Sukses: onAuthStateChanged akan menangani sisanya
       emailInput.value = '';
       passwordInput.value = '';
       errorEl.style.display = 'none';
@@ -151,7 +142,6 @@ async function handleLogin() {
       if(err.code === 'auth/invalid-email') msg = 'Format email salah.';
       if(err.code === 'auth/user-not-found') msg = 'User tidak ditemukan.';
       if(err.code === 'auth/wrong-password') msg = 'Password salah.';
-      
       errorEl.textContent = msg; 
       errorEl.style.display = 'block'; 
   } finally { 
@@ -160,10 +150,9 @@ async function handleLogin() {
 }
 
 function handleLogout() { 
-    // Konfirmasi Logout menggunakan SweetAlert
     Swal.fire({
-        title: 'Logout?',
-        text: "Anda akan keluar dari dashboard admin.",
+        title: 'Keluar?',
+        text: "Sesi Anda akan diakhiri.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
@@ -185,17 +174,16 @@ function cleanupApp() {
     if (unsubscribeReservations) unsubscribeReservations();
     if (unsubscribeRequests) unsubscribeRequests();
     
-    // Reset Variable
     dataReservasi = {};
     requestsCache = [];
     allReservationsList = [];
+    allReservationsCache = null;
     currentSortMode = 'jam'; 
 }
 
 
 /**
  * 4. NAVIGASI UI (SIDEBAR & TABS)
- * Mengatur perpindahan halaman dashboard tanpa reload.
  */
 function switchTab(tabId) {
     // 1. Sembunyikan semua konten tab
@@ -208,13 +196,11 @@ function switchTab(tabId) {
     const target = document.getElementById('tab-' + tabId);
     if (target) {
         target.style.display = 'block';
-        setTimeout(() => target.classList.add('active'), 10); // Trigger animasi CSS
+        setTimeout(() => target.classList.add('active'), 10);
     }
     
-    // 3. Update status Active di Sidebar Menu
+    // 3. Update status Active di Sidebar
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    
-    // Cari elemen nav-item yang memiliki onclick ke tabId ini
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
         if(item.getAttribute('onclick').includes(tabId)) {
@@ -222,27 +208,29 @@ function switchTab(tabId) {
         }
     });
 
-    // 4. Update Judul Halaman
+    // 4. Update Header Title
     const titles = {
         'dashboard': 'Dashboard Overview',
         'inbox': 'Inbox Permintaan',
         'calendar': 'Kalender Reservasi',
         'data': 'Manajemen Data Master',
         'broadcast': 'Broadcast Promosi',
-        'analysis': 'Analisis Bisnis',
+        'analysis': 'Analisis Bisnis & Data',
         'settings': 'Pengaturan Tampilan'
     };
     const titleEl = document.getElementById('page-title');
     if(titleEl) titleEl.innerText = titles[tabId] || 'Dashboard';
 
-    // 5. UX Mobile: Tutup sidebar otomatis setelah klik menu
+    // 5. UX Mobile: Tutup sidebar otomatis
     if(window.innerWidth < 768) {
         const sidebar = document.getElementById('sidebar');
         if(sidebar && sidebar.classList.contains('open')) toggleSidebar();
     }
 
-    // 6. Trigger Khusus (Lazy Load Chart)
-    if(tabId === 'analysis' && typeof runUIAnalysis === 'function') {
+    // 6. Trigger Khusus Analisis
+    if(tabId === 'analysis') {
+        // Init dropdown filter jika belum ada
+        initAnalysisFilters();
         runUIAnalysis();
     }
 }
@@ -252,10 +240,15 @@ function toggleSidebar() {
     const btn = document.getElementById('mobile-toggle');
     sb.classList.toggle('open');
     
-    // Ubah ikon toggle
-    btn.innerHTML = sb.classList.contains('open') 
-        ? '<i class="fas fa-times"></i>' 
-        : '<i class="fas fa-bars"></i>';
+    // Feedback visual pada tombol (icon berubah)
+    const icon = btn.querySelector('i');
+    if (sb.classList.contains('open')) {
+        icon.classList.remove('fa-bars');
+        icon.classList.add('fa-times');
+    } else {
+        icon.classList.remove('fa-times');
+        icon.classList.add('fa-bars');
+    }
 }
 
 function updateHeaderDate() {
@@ -271,28 +264,27 @@ function updateHeaderDate() {
 
 /**
  * 5. FUNGSI UTILITIES & HELPERS
- * Fungsi pendukung yang digunakan di seluruh aplikasi.
  */
 
-// Format Rupiah (Rp 10.000)
+// Format Rupiah
 function formatRupiah(amount) {
     if (amount === null || amount === undefined || isNaN(amount)) return '0';
     return Number(amount).toLocaleString('id-ID');
 }
 
-// Bersihkan No HP (0812-345 -> 0812345)
+// Bersihkan No HP
 function cleanPhoneNumber(phone) { 
     if(!phone) return '';
     return phone.toString().replace(/[^0-9]/g, ''); 
 }
 
-// Validasi Format HP (10-14 digit)
+// Validasi HP
 function isValidPhone(phone) { 
     const cleaned = cleanPhoneNumber(phone);
     return /^[0-9]{10,14}$/.test(cleaned); 
 }
 
-// Keamanan: Escape HTML untuk mencegah XSS
+// Escape HTML
 function escapeHtml(text) {
   if (!text) return text;
   return text
@@ -303,19 +295,16 @@ function escapeHtml(text) {
       .replace(/'/g, "&#039;");
 }
 
-// UI: Toast Notification
+// Toast Notification
 function showToast(message, type = 'success') {
-    toast.innerHTML = type === 'error' 
-        ? `<i class="fas fa-exclamation-circle"></i> ${message}`
-        : `<i class="fas fa-check-circle"></i> ${message}`;
-    
+    let icon = type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
+    if(type === 'info') icon = '<i class="fas fa-info-circle"></i>';
+
+    toast.innerHTML = `${icon} &nbsp; ${message}`;
     toast.className = `toast ${type}`;
     toast.style.display = 'block';
     
-    // Animasi Masuk
     setTimeout(() => { toast.style.transform = 'translateX(-50%) translateY(0)'; toast.style.opacity = 1; }, 10);
-
-    // Hilang Otomatis
     setTimeout(() => { 
         toast.style.transform = 'translateX(-50%) translateY(20px)'; 
         toast.style.opacity = 0;
@@ -323,18 +312,17 @@ function showToast(message, type = 'success') {
     }, 3500);
 }
 
-// UI: Loading Spinner
+// Loader & Popup
 function showLoader() { if(loadingOverlay) loadingOverlay.style.display = 'flex'; }
 function hideLoader() { if(loadingOverlay) loadingOverlay.style.display = 'none'; }
 
-// UI: Tutup Popup
 function closePopup(popupId) {
     const popup = document.getElementById(popupId);
     if(popup) popup.style.display = 'none';
     if(overlay) overlay.style.display = 'none';
 }
 
-// Helper: Deteksi klik di luar sidebar (Mobile)
+// Mobile: Close Sidebar on Outside Click
 document.addEventListener('click', (e) => {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('mobile-toggle');
@@ -352,7 +340,7 @@ document.addEventListener('click', (e) => {
 /**
  * 7. INISIALISASI APLIKASI
  * Fungsi sentral yang dipanggil setelah login berhasil.
- * Mengatur urutan loading data agar dependensi terpenuhi.
+ * Mengatur urutan loading data agar dependensi terpenuhi (Data Master -> Transaksi).
  */
 async function initializeApp() { 
   showLoader();
@@ -374,7 +362,7 @@ async function initializeApp() {
 
     // 2. Load Data Master (Parallel)
     // Kita WAJIB memuat Menu (untuk harga & rincian) dan Lokasi (untuk kapasitas) 
-    // sebelum memuat data reservasi/inbox agar tidak ada error saat render.
+    // sebelum memuat data reservasi/inbox agar tidak ada error saat render UI.
     await Promise.all([
         loadMenus(),     // Mengisi detailMenu dan menuPrices
         loadLocations()  // Mengisi locationsData
@@ -386,9 +374,10 @@ async function initializeApp() {
         loadReservationsForCurrentMonth(); 
     }
     
-    initInboxListener(); // Listener Inbox Request
+    // Aktifkan Listener Inbox
+    initInboxListener(); 
     
-    // 4. Setup Background Jobs
+    // 4. Setup Background Jobs (Notifikasi)
     if (typeof setupReliableNotificationChecker === 'function') {
         setupReliableNotificationChecker(); // Ada di Bagian 5
     }
@@ -405,8 +394,7 @@ async function initializeApp() {
 
 /**
  * 8. LOAD DATA MASTER (MENU & LOKASI)
- * Mengambil data referensi dari Firestore untuk validasi dan UI.
- * PENTING: Data ini digunakan untuk menyusun pesan WA yang detail.
+ * Mengambil data referensi dari Firestore untuk validasi, harga, dan format WA.
  */
 async function loadMenus() {
   try {
@@ -429,6 +417,7 @@ async function loadMenus() {
         const data = doc.data();
         
         // Simpan ke Cache Global (Penting untuk kalkulasi harga & detail WA)
+        // Format: detailMenu["Nama Menu"] = ["Nasi", "Ayam", ...]
         detailMenu[doc.id] = data.details || []; 
         menuPrices[doc.id] = data.price || 0;
         
@@ -484,7 +473,7 @@ async function loadLocations() {
                 <div style="flex:1;">
                     <div style="font-weight:700; color:var(--text-main); font-size:0.95rem;">${escapeHtml(data.name)}</div>
                 </div>
-                <div class="pill" style="background:var(--primary-light); color:var(--primary-dark); font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 600;">
+                <div class="pill" style="background:var(--primary-gradient); color:white; font-size: 0.75rem; padding: 4px 10px; border-radius: 12px; font-weight: 600;">
                     Kap: ${data.capacity} Org
                 </div>
             </div>`;
@@ -813,7 +802,7 @@ async function rejectRequest(id) {
 /**
  * 13. LOAD RESERVASI BULANAN (REALTIME LISTENER)
  * Mengambil data reservasi range 1 bulan penuh.
- * Data ini digunakan untuk mewarnai Kalender DAN menghitung Statistik Dashboard.
+ * Data ini digunakan untuk mewarnai Kalender DAN menghitung Statistik Dashboard harian.
  */
 function loadReservationsForCurrentMonth() {
   // Matikan listener lama agar tidak menumpuk saat ganti bulan
@@ -826,7 +815,7 @@ function loadReservationsForCurrentMonth() {
   const monthStr = String(currentMonth + 1).padStart(2, '0');
   const startDate = `${currentYear}-${monthStr}-01`;
   
-  // Cari tanggal terakhir bulan ini (misal: 28, 30, atau 31)
+  // Cari tanggal terakhir bulan ini
   const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
   const endDate = `${currentYear}-${monthStr}-${lastDay}`;
   
@@ -847,8 +836,7 @@ function loadReservationsForCurrentMonth() {
           allReservationsList.push(r);
 
           // Masukkan ke Grouping Tanggal (untuk grid kalender)
-          // Kita ambil substring "MM-DD" dari string "YYYY-MM-DD"
-          const dateKey = r.date.substring(5); 
+          const dateKey = r.date.substring(5); // Ambil "MM-DD"
           
           if (!dataReservasi[dateKey]) {
               dataReservasi[dateKey] = [];
@@ -865,8 +853,7 @@ function loadReservationsForCurrentMonth() {
         // 3. Cek Auto Open (Deep Link dari notifikasi WA)
         handleAutoOpen();
 
-        // 4. Jika user sedang membuka detail tanggal tertentu, refresh list-nya
-        // (Agar jika ada data baru masuk di tanggal yg sedang dibuka, langsung muncul)
+        // 4. Jika user sedang membuka detail tanggal tertentu, refresh list-nya secara realtime
         if (tanggalDipilih && !hasAutoOpened) {
             const reservations = dataReservasi[tanggalDipilih] || [];
             updateReservationList(reservations);
@@ -891,13 +878,11 @@ function updateDashboardWidgets(allData) {
     const todayStr = new Date().toISOString().split('T')[0];
     
     // --- Widget 1: Tamu Hari Ini ---
-    // Hitung jumlah reservasi yang tanggalnya hari ini
     const todayCount = allData.filter(r => r.date === todayStr).length;
     const statToday = document.getElementById('stat-today-count');
     if(statToday) statToday.textContent = todayCount;
 
     // --- Widget 2: Omzet DP Bulan Ini ---
-    // Menjumlahkan field 'dp' dari semua reservasi yang termuat
     const totalDp = allData.reduce((acc, curr) => acc + (parseInt(curr.dp) || 0), 0);
     const statRev = document.getElementById('stat-revenue-month');
     if(statRev) statRev.textContent = 'Rp ' + formatRupiah(totalDp);
@@ -910,7 +895,7 @@ function updateDashboardWidgets(allData) {
             const timeA = a.createdAt ? a.createdAt.seconds : 0;
             const timeB = b.createdAt ? b.createdAt.seconds : 0;
             return timeB - timeA;
-        }).slice(0, 5); // Ambil 5 teratas
+        }).slice(0, 5); 
 
         if (sortedRecent.length === 0) {
             recentListContainer.innerHTML = '<p style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada reservasi bulan ini.</p>';
@@ -924,7 +909,7 @@ function updateDashboardWidgets(allData) {
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <span class="pill" style="background:var(--primary-light); color:var(--primary-dark); font-size:0.75rem;">${r.jumlah} Pax</span>
+                        <span class="pill" style="background:var(--primary-gradient); color:white; font-size:0.75rem;">${r.jumlah} Pax</span>
                         <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(r.tempat)}</div>
                     </div>
                 </div>
@@ -936,8 +921,7 @@ function updateDashboardWidgets(allData) {
 
 /**
  * 15. RENDER GRID KALENDER (PRESISI)
- * Membuat kotak-kotak tanggal sesuai bulan yang dipilih.
- * Menggunakan Filler Divs agar hari Senin jatuh di kolom Senin.
+ * Membuat kotak-kotak tanggal. Menggunakan Filler Divs agar hari Senin jatuh di kolom Senin.
  */
 function buatKalender() {
   const calendarEl = document.getElementById('calendar');
@@ -948,15 +932,13 @@ function buatKalender() {
   calendarEl.innerHTML = ''; 
   monthYearEl.textContent = `${monthNames[currentMonth]} ${currentYear}`;
   
-  // Logika Hari: Mencari hari apa tanggal 1 dimulai
-  // getDay(): 0 = Minggu, 1 = Senin, dst.
+  // Logika Hari: Mencari hari apa tanggal 1 dimulai (0=Minggu, 1=Senin...)
   const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); 
   
   // Total hari dalam bulan ini
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate(); 
   
   // Render Filler (Kotak transparan sebelum tanggal 1)
-  // Ini PENTING agar grid rapi sesuai hari
   for (let i = 0; i < firstDayIndex; i++) { 
       calendarEl.insertAdjacentHTML('beforeend', `<div class="calendar-day disabled" style="cursor:default; background:transparent; border:none; box-shadow:none;"></div>`); 
   }
@@ -971,13 +953,12 @@ function buatKalender() {
     // Cek Status Terpilih (Highlight)
     const isSelected = dateKey === tanggalDipilih ? 'selected' : '';
     
-    // Hitung Jumlah Reservasi pada tanggal ini
+    // Hitung Jumlah Reservasi
     const dailyData = dataReservasi[dateKey] || [];
     const countHTML = dailyData.length > 0 
         ? `<span class="reservation-count">${dailyData.length} Res</span>` 
         : '';
     
-    // Generate HTML Kotak Tanggal
     calendarEl.insertAdjacentHTML('beforeend', `
       <div class="calendar-day ${isToday} ${isSelected}" onclick="pilihTanggal(${i})">
         <span class="day-number">${i}</span>
@@ -988,7 +969,7 @@ function buatKalender() {
 
 
 /**
- * 16. INTERAKSI TANGGAL (DETAIL VIEW & SORTING)
+ * 16. INTERAKSI TANGGAL & SORTING
  */
 
 function pilihTanggal(day) {
@@ -1004,7 +985,7 @@ function pilihTanggal(day) {
   // Update Judul Section Detail
   const viewTitle = document.getElementById('reservation-view-title');
   if(viewTitle) {
-      viewTitle.innerHTML = `${day} ${monthNames[currentMonth]} ${currentYear}`;
+      viewTitle.innerHTML = `<i class="far fa-calendar-check"></i> ${day} ${monthNames[currentMonth]} ${currentYear}`;
   }
   
   // Reset Search Bar
@@ -1024,14 +1005,13 @@ function pilihTanggal(day) {
 
 function kembaliKeKalender() {
   const viewContainer = document.getElementById('reservation-view-container');
-  if(viewContainer) {
-      viewContainer.style.display = 'none';
-  }
+  if(viewContainer) viewContainer.style.display = 'none';
+  
   tanggalDipilih = ''; 
   buatKalender(); // Hapus highlight
 }
 
-// --- LOGIKA SORTING (Fitur yang Anda minta dikembalikan) ---
+// --- LOGIKA SORTING (Fitur Requested) ---
 function toggleSortDropdown() {
     const d = document.getElementById('sort-dropdown');
     if (d) d.style.display = d.style.display === 'block' ? 'none' : 'block';
@@ -1054,7 +1034,8 @@ function applySort(mode) {
 
 /**
  * 17. RENDER LIST DETAIL (INTI TAMPILAN DATA)
- * Menampilkan kartu detail. Diperbaiki untuk mendukung Sorting & Template Chat Baru.
+ * Menampilkan kartu detail.
+ * PENTING: Tombol Chat WA memanggil ID, agar Data Master (Menu) bisa diambil di Bagian 5.
  */
 function updateReservationList(reservations) {
     const container = document.getElementById('reservation-detail-list');
@@ -1091,8 +1072,7 @@ function updateReservationList(reservations) {
         
         if (Array.isArray(r.menus) && r.menus.length > 0) {
             menuItemsHtml = r.menus.map(item => {
-                // Kita tidak menampilkan rincian detail (nasi, ayam, dll) di kartu agar tidak terlalu panjang
-                // Detail lengkap hanya akan muncul di WhatsApp
+                // Di kartu aplikasi kita tampilkan ringkas. Detail lengkap muncul di WA.
                 const details = detailMenu[item.name] || [];
                 const detailStr = details.length > 0 
                     ? `<span style="font-size:0.75rem; color:#888;"> (${details.length} item)</span>` 
@@ -1115,15 +1095,13 @@ function updateReservationList(reservations) {
                 <i class="fas fa-exclamation-circle"></i> Tanpa DP
                </span>`;
         
-        // Tombol Thanks (Status)
+        // Tombol Thanks
         let thanksBtn = r.thankYouSent 
             ? `<button class="btn-icon" disabled style="background:#f1f5f9; color:#94a3b8; cursor:default;" title="Sudah dikirim"><i class="fas fa-check-double"></i></button>`
             : `<button class="btn-icon info" id="thank-btn-${r.id}" onclick="sendThankYouMessage('${r.id}', '${escapeHtml(r.nama)}', '${r.nomorHp}')" title="Kirim Ucapan"><i class="fas fa-gift"></i></button>`;
 
-        // --- RENDER KARTU HTML ---
         return `
         <div class="reservation-item glass-card" style="margin:0; padding:20px; border-left:4px solid var(--primary); margin-bottom:15px;">
-            
             <div style="border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:10px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:5px;">
                     <h4 style="margin:0; color:var(--text-main); font-size:1.1rem;">${escapeHtml(r.nama)}</h4>
@@ -1237,6 +1215,7 @@ function handleAutoOpen() {
 
 /**
  * 19. TAMPILKAN FORM TAMBAH (RESET UI & SET TANGGAL)
+ * Menyiapkan popup formulir untuk input data baru.
  */
 function showAddForm() {
     const form = document.getElementById('reservation-form');
@@ -1251,11 +1230,11 @@ function showAddForm() {
     const dateInput = document.getElementById('inputDate');
     
     if (tanggalDipilih) {
-        // Jika user sudah klik tanggal di kalender, gunakan itu
-        // Format tanggalDipilih saat ini adalah "MM-DD", kita butuh "YYYY-MM-DD"
+        // Jika user sedang membuka tanggal tertentu di kalender, gunakan itu
+        // Format tanggalDipilih "MM-DD", kita butuh "YYYY-MM-DD"
         dateInput.value = `${currentYear}-${tanggalDipilih}`;
     } else {
-        // Jika belum pilih, default ke Hari Ini
+        // Jika tidak ada tanggal terpilih (misal dari Dashboard), default ke Hari Ini
         const now = new Date();
         const y = now.getFullYear();
         const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -1283,16 +1262,20 @@ function showAddForm() {
 
 /**
  * 20. TAMPILKAN FORM EDIT (INJECT HTML DINAMIS)
- * (Tidak ada perubahan logika, hanya memastikan fungsi ini tetap ada)
+ * Mengambil data reservasi yang ada, membuat form edit on-the-fly.
  */
 function editReservasi(id) {
+  // Cari data di cache
   let res = null;
   for (const dateKey in dataReservasi) {
       const found = dataReservasi[dateKey].find(r => r.id === id);
       if (found) { res = found; break; }
   }
 
-  if (!res) { return showToast("Data tidak ditemukan.", "error"); }
+  if (!res) { 
+      showToast("Data tidak ditemukan di cache (mungkin sudah dihapus).", "error"); 
+      return; 
+  }
   
   const formContainer = document.getElementById('editFormPopup');
   
@@ -1307,8 +1290,8 @@ function editReservasi(id) {
       
       <div class="form-group">
           <label>Tanggal</label>
-          <input type="date" id="editDate" class="glass-input" value="${res.date}" readonly style="background:#eee; cursor:not-allowed;" />
-          <small style="color:#888;">(Tanggal tidak bisa diubah saat edit)</small>
+          <input type="date" id="editDate" class="glass-input" value="${res.date}" readonly style="background:#f1f5f9; color:#64748b; cursor:not-allowed;" />
+          <small style="color:#94a3b8; font-size:0.8rem;">*Tanggal tidak bisa diubah saat edit (Hapus & Buat baru jika perlu).</small>
       </div>
 
       <div class="form-group">
@@ -1384,8 +1367,10 @@ function editReservasi(id) {
   
   const editFormEl = document.getElementById('edit-reservation-form');
   
-  // Set Nilai Awal
-  editFormEl.querySelector('#tipeDp').value = res.tipeDp || '';
+  // Set Nilai Awal Dropdown
+  const tipeDpSelect = editFormEl.querySelector('#tipeDp');
+  if(tipeDpSelect) tipeDpSelect.value = res.tipeDp || '';
+  
   const tempatSelect = editFormEl.querySelector('#tempat');
   populateLocationDropdown(tempatSelect, res.tempat);
   updateCapacityInfo('edit-reservation-form');
@@ -1393,6 +1378,7 @@ function editReservasi(id) {
   // Populate Menu
   const menuContainer = editFormEl.querySelector('#selected-menus-container');
   menuContainer.innerHTML = ''; 
+
   if (Array.isArray(res.menus) && res.menus.length > 0) {
     res.menus.forEach(item => {
         addMenuSelectionRow('edit-reservation-form', item.name, item.quantity);
@@ -1409,13 +1395,14 @@ function editReservasi(id) {
 
 
 /**
- * 21. OPERASI DATABASE: TAMBAH (CREATE - LOGIKA BARU)
+ * 21. OPERASI DATABASE: TAMBAH (CREATE)
+ * Menggunakan tanggal dari input manual, bukan state global.
  */
 async function simpanReservasi() {
   const formData = await validateAndGetFormData('reservation-form');
-  if (!formData) return; 
+  if (!formData) return; // Stop jika tidak valid
   
-  // --- PERBAIKAN UTAMA: AMBIL TANGGAL DARI INPUT ---
+  // --- AMBIL TANGGAL DARI INPUT FORM ---
   const dateInput = document.getElementById('inputDate').value;
   if (!dateInput) { 
       showToast("Tanggal wajib diisi!", "error");
@@ -1426,7 +1413,7 @@ async function simpanReservasi() {
   try {
     const payload = { 
         ...formData, 
-        date: dateInput, // Gunakan nilai dari input date, bukan global state
+        date: dateInput, // Gunakan tanggal yang dipilih user
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         thankYouSent: false
     };
@@ -1435,10 +1422,6 @@ async function simpanReservasi() {
     
     showToast("Reservasi berhasil disimpan!", "success");
     closePopup('addFormPopup'); 
-    
-    // Jika tanggal yang dipilih di form berbeda dengan view kalender saat ini,
-    // kita beri notifikasi kecil atau navigasi (opsional).
-    // Tapi data sudah pasti masuk ke tanggal yang benar di database.
     
   } catch (e) { 
     console.error("Save Error:", e);
@@ -1461,9 +1444,12 @@ async function simpanPerubahanReservasi() {
   
   showLoader();
   try {
+    // Update data (field tanggal tidak ikut diupdate)
     await db.collection('reservations').doc(id).update(formData);
+    
     showToast("Perubahan berhasil disimpan.", "success");
     closePopup('editFormPopup');
+    
   } catch (e) { 
     console.error("Update Error:", e);
     showToast("Gagal mengupdate data.", "error"); 
@@ -1505,6 +1491,7 @@ async function hapusReservasi(id) {
 
 /**
  * 24. VALIDASI FORM & DATA EXTRACTION
+ * Mengambil data dari form, membersihkan input, dan memvalidasi aturan bisnis.
  */
 async function validateAndGetFormData(formId) {
     const form = document.getElementById(formId);
@@ -1513,28 +1500,35 @@ async function validateAndGetFormData(formId) {
     const setError = (elementId, message) => { 
         const errEl = form.querySelector(`#${elementId}-error`);
         if(errEl) errEl.textContent = message; 
+        
         const inputEl = form.querySelector(`#${elementId}`);
         if(inputEl) inputEl.style.borderColor = 'var(--danger)';
+        
         isValid = false; 
     };
 
+    // Reset error styles
     form.querySelectorAll('.err-msg').forEach(el => el.textContent = '');
     form.querySelectorAll('.glass-input').forEach(el => el.style.borderColor = '');
 
+    // 1. Validasi Nama
     const namaInput = form.querySelector('#nama');
     const nama = namaInput.value.trim();
     if(!nama) setError('nama', 'Wajib diisi');
 
+    // 2. Validasi Nomor HP
     const hpInput = form.querySelector('#nomorHp');
     const nomorHp = cleanPhoneNumber(hpInput.value);
     if(hpInput.value.trim() !== '' && !isValidPhone(nomorHp)) {
         setError('nomorHp', 'Min 10 digit');
     }
 
+    // 3. Validasi Jam
     const jamInput = form.querySelector('#jam');
     const jam = jamInput.value;
     if(!jam) setError('jam', 'Wajib diisi');
 
+    // 4. Validasi Jumlah & Kapasitas Tempat
     const jumlahInput = form.querySelector('#jumlah');
     const jumlah = parseInt(jumlahInput.value);
     const tempatInput = form.querySelector('#tempat');
@@ -1545,6 +1539,7 @@ async function validateAndGetFormData(formId) {
     if(!tempat) {
         setError('tempat', 'Pilih tempat');
     } else {
+        // Cek Kapasitas
         const locationKey = Object.keys(locationsData).find(k => locationsData[k].name === tempat);
         if(locationKey) {
             const cap = locationsData[locationKey].capacity;
@@ -1555,6 +1550,7 @@ async function validateAndGetFormData(formId) {
         }
     }
 
+    // 5. Validasi & Ekstraksi Menu
     const menus = [];
     const menuRows = form.querySelectorAll('.menu-selection-row');
     const selectedItems = new Set();
@@ -1568,7 +1564,7 @@ async function validateAndGetFormData(formId) {
         
         if(mName && !isNaN(mQty) && mQty > 0) {
             if(selectedItems.has(mName)) {
-                setError('menus', 'Menu ganda.');
+                setError('menus', 'Menu ganda. Gabungkan baris.');
             } else {
                 selectedItems.add(mName);
                 menus.push({ name: mName, quantity: mQty });
@@ -1595,6 +1591,8 @@ async function validateAndGetFormData(formId) {
 /**
  * 25. HELPER UI FORM
  */
+
+// Menambah Baris Input Menu
 function addMenuSelectionRow(formId, defaultName='', defaultQty=1) {
   const container = document.querySelector(`#${formId} #selected-menus-container`);
   if (!container) return;
@@ -1605,6 +1603,7 @@ function addMenuSelectionRow(formId, defaultName='', defaultQty=1) {
   div.style.gap = '10px';
   div.style.marginBottom = '10px';
   
+  // Build Options
   const optionsHtml = Object.keys(detailMenu).sort().map(name => {
       const price = menuPrices[name] ? ` (Rp ${formatRupiah(menuPrices[name])})` : '';
       const selected = name === defaultName ? 'selected' : '';
@@ -1621,13 +1620,18 @@ function addMenuSelectionRow(formId, defaultName='', defaultQty=1) {
         <i class="fas fa-trash"></i>
     </button>
   `;
+  
   container.appendChild(div);
 }
 
+// Populate Dropdown Lokasi
 function populateLocationDropdown(selectElement, defaultValue='') {
     if(!selectElement) return;
+    
     selectElement.innerHTML = '<option value="">-- Pilih Lokasi --</option>';
+    
     const sortedLocs = Object.values(locationsData).sort((a,b) => a.name.localeCompare(b.name));
+    
     sortedLocs.forEach(loc => {
         const selected = loc.name === defaultValue ? 'selected' : '';
         const option = `<option value="${loc.name}" ${selected}>${escapeHtml(loc.name)} (Kap: ${loc.capacity})</option>`;
@@ -1635,22 +1639,29 @@ function populateLocationDropdown(selectElement, defaultValue='') {
     });
 }
 
+// Update Info Kapasitas
 function updateCapacityInfo(formId) {
     const form = document.getElementById(formId);
     const select = form.querySelector('#tempat');
     const infoSpan = form.querySelector('#capacity-info');
+    
     const val = select.value;
-    if(!val) { infoSpan.textContent = ''; return; }
+    if(!val) {
+        infoSpan.textContent = '';
+        return;
+    }
+    
     const locKey = Object.keys(locationsData).find(k => locationsData[k].name === val);
     if (locKey) {
         const cap = locationsData[locKey].capacity;
         infoSpan.innerHTML = `<i class="fas fa-info-circle"></i> Max: <b>${cap} orang</b>`;
-    } else { infoSpan.textContent = ''; }
+    } else {
+        infoSpan.textContent = '';
+    }
 }
-
 // ============================================================================
 // FILE: app.js
-// BAGIAN 5: MASTER DATA, BROADCAST, ANALISIS, SETTINGS & WA LOGIC (FIXED)
+// BAGIAN 5: ANALISIS DATA CANGGIH, BROADCAST, SETTINGS & LOGIKA WA (FINAL)
 // ============================================================================
 
 /**
@@ -1671,17 +1682,16 @@ function showMenuManagement() {
                  <input type="text" id="newMenuName" class="glass-input" placeholder="Nama Menu (Cth: Paket G)">
                  <input type="number" id="newMenuPrice" class="glass-input" placeholder="Harga (Rp)">
               </div>
-              <textarea id="newMenuDetails" class="glass-input" placeholder="Detail isi menu (pisahkan koma). Cth: Nasi putih, Ayam bakar, Es Teh" style="min-height:80px;"></textarea>
+              <textarea id="newMenuDetails" class="glass-input" placeholder="Rincian isi menu (pisahkan koma). Cth: Nasi putih, Ayam bakar, Sambal" style="min-height:80px;"></textarea>
               <button class="btn-primary-gradient full-width" onclick="addNewMenu()" style="margin-top:10px;">
                  <i class="fas fa-plus-circle"></i> Simpan Menu
               </button>
           </div>
-
+          
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h4 style="margin:0;">Daftar Menu Aktif</h4>
             <small style="color:#666;">Total: ${Object.keys(detailMenu).length}</small>
           </div>
-
           <div id="manage-menu-list" style="max-height:300px; overflow-y:auto; border:1px solid rgba(0,0,0,0.05); border-radius:12px; background:white;"></div>
       </div>`;
     
@@ -1718,7 +1728,7 @@ async function addNewMenu() {
     const detailsRaw = document.getElementById('newMenuDetails').value;
     
     if(!name) return showToast("Nama menu wajib diisi", "error");
-    if(detailMenu[name]) return showToast("Menu dengan nama ini sudah ada", "error");
+    if(detailMenu[name]) return showToast("Menu sudah ada", "error");
 
     const details = detailsRaw.split(',').map(s => s.trim()).filter(Boolean);
     
@@ -1726,32 +1736,23 @@ async function addNewMenu() {
     try {
         await db.collection('menus').doc(name).set({ details: details, price: isNaN(price) ? 0 : price });
         showToast("Menu berhasil ditambahkan", "success");
-        await loadMenus(); renderManageMenuList(); // Refresh
-        
-        // Reset Input
+        await loadMenus(); renderManageMenuList();
         document.getElementById('newMenuName').value = '';
         document.getElementById('newMenuPrice').value = '';
         document.getElementById('newMenuDetails').value = '';
-    } catch(e) { 
-        console.error(e); 
-        showToast("Gagal menambah menu", "error"); 
-    } finally { 
-        hideLoader(); 
-    }
+    } catch(e) { console.error(e); showToast("Gagal menambah menu", "error"); } 
+    finally { hideLoader(); }
 }
 
 async function deleteMenu(name) {
-    if(!confirm(`Yakin ingin menghapus menu "${name}"?`)) return;
+    if(!confirm(`Hapus menu "${name}"?`)) return;
     showLoader();
     try {
         await db.collection('menus').doc(name).delete();
         showToast("Menu dihapus", "success");
         await loadMenus(); renderManageMenuList();
-    } catch(e) { 
-        showToast("Gagal menghapus menu", "error"); 
-    } finally { 
-        hideLoader(); 
-    }
+    } catch(e) { showToast("Gagal hapus", "error"); } 
+    finally { hideLoader(); }
 }
 
 
@@ -1779,10 +1780,8 @@ function showLocationManagement() {
           <h4 style="margin:0 0 10px 0;">Daftar Tempat</h4>
           <div id="manage-loc-list" style="max-height:300px; overflow-y:auto; border:1px solid rgba(0,0,0,0.05); border-radius:12px; background:white;"></div>
       </div>`;
-    
     renderManageLocList();
-    popup.style.display = 'block'; 
-    overlay.style.display = 'block';
+    popup.style.display = 'block'; overlay.style.display = 'block';
 }
 
 function renderManageLocList() {
@@ -1807,7 +1806,7 @@ async function addNewLocation() {
     if(!name || isNaN(cap) || cap < 1) return showToast("Data tidak valid", "error");
     
     const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    if(locationsData[id]) return showToast("ID Lokasi sudah ada", "error");
+    if(locationsData[id]) return showToast("Lokasi sudah ada", "error");
     
     showLoader();
     try {
@@ -1816,8 +1815,7 @@ async function addNewLocation() {
         await loadLocations(); renderManageLocList();
         document.getElementById('newLocName').value = '';
         document.getElementById('newLocCap').value = '';
-    } catch(e) { showToast("Gagal tambah lokasi", "error"); } 
-    finally { hideLoader(); }
+    } catch(e) { showToast("Gagal tambah lokasi", "error"); } finally { hideLoader(); }
 }
 
 async function deleteLocation(docId) {
@@ -1827,8 +1825,7 @@ async function deleteLocation(docId) {
         await db.collection('locations').doc(docId).delete();
         showToast("Lokasi dihapus", "success");
         await loadLocations(); renderManageLocList();
-    } catch(e) { showToast("Gagal hapus", "error"); } 
-    finally { hideLoader(); }
+    } catch(e) { showToast("Gagal hapus", "error"); } finally { hideLoader(); }
 }
 
 
@@ -1985,18 +1982,37 @@ function executePrint() {
 
 
 /**
- * 30. ANALISIS GRAFIK (CHART.JS)
+ * 30. ANALISIS DATA SUPER LENGKAP (GRAFIK & LEADERBOARD)
+ * Menampilkan Tren Penjualan, Jam Sibuk, Menu Terlaris, dan Top Pelanggan.
  */
 let chartInstance = null;
-async function runUIAnalysis() {
-    const sel = document.getElementById('anl-year-ui');
-    if(sel && sel.options.length === 0) {
-        const y = new Date().getFullYear();
-        sel.innerHTML = `<option value="${y}">${y}</option><option value="${y-1}">${y-1}</option>`;
+let chartHours = null;
+let chartMenu = null;
+
+// Init Filter Tahun & Bulan
+function initAnalysisFilters() {
+    const yearSel = document.getElementById('anl-year-ui');
+    const monthSel = document.getElementById('anl-month-ui');
+    
+    if(yearSel && yearSel.options.length === 0) {
+        const currentY = new Date().getFullYear();
+        yearSel.innerHTML = '';
+        for(let y = currentY; y >= 2024; y--) {
+            yearSel.innerHTML += `<option value="${y}">${y}</option>`;
+        }
+        
+        monthSel.innerHTML = '<option value="all">Semua Bulan</option>';
+        monthNames.forEach((m, idx) => {
+            monthSel.innerHTML += `<option value="${idx}">${m}</option>`;
+        });
     }
+}
+
+async function runUIAnalysis() {
     const chartCanvas = document.getElementById('mainChart');
     if(!chartCanvas) return;
 
+    // Load Data Global jika belum ada
     if(!allReservationsCache) {
         showLoader();
         try {
@@ -2006,41 +2022,167 @@ async function runUIAnalysis() {
         hideLoader();
     }
     
-    const year = parseInt(sel ? sel.value : new Date().getFullYear());
-    const monthlyCounts = Array(12).fill(0);
-    allReservationsCache.forEach(r => {
-        if(r.date) { const d = new Date(r.date); if(d.getFullYear()===year) monthlyCounts[d.getMonth()]++; }
+    // Ambil Filter
+    const yearSel = document.getElementById('anl-year-ui');
+    const monthSel = document.getElementById('anl-month-ui');
+    const selectedYear = parseInt(yearSel.value);
+    const selectedMonth = monthSel.value === 'all' ? 'all' : parseInt(monthSel.value);
+
+    // --- FILTER DATA ---
+    const filteredData = allReservationsCache.filter(r => {
+        if (!r.date) return false;
+        const d = new Date(r.date);
+        const matchYear = d.getFullYear() === selectedYear;
+        const matchMonth = selectedMonth === 'all' ? true : d.getMonth() === selectedMonth;
+        return matchYear && matchMonth;
     });
+
+    // --- PROSES DATA ---
+    let labels = [];
+    let dataPoints = [];
     
+    // 1. DATA TREN (Harian atau Bulanan)
+    if (selectedMonth === 'all') {
+        // Tampilkan Tren Bulanan (Jan-Des)
+        labels = monthNames.map(m => m.substr(0,3));
+        dataPoints = Array(12).fill(0);
+        filteredData.forEach(r => {
+            const d = new Date(r.date);
+            dataPoints[d.getMonth()]++;
+        });
+    } else {
+        // Tampilkan Tren Harian (Tgl 1 - Akhir)
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        labels = Array.from({length: daysInMonth}, (_, i) => (i+1).toString());
+        dataPoints = Array(daysInMonth).fill(0);
+        filteredData.forEach(r => {
+            const d = new Date(r.date);
+            dataPoints[d.getDate() - 1]++;
+        });
+    }
+
+    // 2. DATA JAM SIBUK (Peak Hours)
+    const hoursCounts = {};
+    filteredData.forEach(r => {
+        if(r.jam) {
+            const h = r.jam.split(':')[0]; // Ambil jam saja (07, 10, 12, dst)
+            hoursCounts[h] = (hoursCounts[h] || 0) + 1;
+        }
+    });
+    const sortedHours = Object.keys(hoursCounts).sort();
+    const hoursData = sortedHours.map(h => hoursCounts[h]);
+
+    // 3. DATA MENU TERLARIS
+    const menuCounts = {};
+    filteredData.forEach(r => {
+        if (r.menus && Array.isArray(r.menus)) {
+            r.menus.forEach(m => {
+                menuCounts[m.name] = (menuCounts[m.name] || 0) + m.quantity;
+            });
+        }
+    });
+    // Sortir & Ambil Top 5
+    const topMenus = Object.entries(menuCounts)
+        .sort((a,b) => b[1] - a[1])
+        .slice(0, 5);
+
+    // 4. DATA PELANGGAN SETIA (Leaderboard)
+    const customerStats = {};
+    filteredData.forEach(r => {
+        const name = r.nama ? r.nama.trim() : 'Tanpa Nama';
+        customerStats[name] = (customerStats[name] || 0) + 1;
+    });
+    const topCustomers = Object.entries(customerStats)
+        .sort((a,b) => b[1] - a[1])
+        .slice(0, 10);
+
+    // --- RENDER CHARTS ---
+    
+    // Chart 1: Tren Utama
     const ctx = chartCanvas.getContext('2d');
     if(chartInstance) chartInstance.destroy();
-    
     chartInstance = new Chart(ctx, {
         type: 'line', 
         data: {
-            labels: monthNames.map(m => m.substr(0, 3)), 
+            labels: labels, 
             datasets: [{
-                label: `Total Reservasi ${year}`,
-                data: monthlyCounts,
+                label: `Jumlah Reservasi`,
+                data: dataPoints,
                 borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderWidth: 2, fill: true, tension: 0.4
+                borderWidth: 2, fill: true, tension: 0.3
             }]
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
     });
+
+    // Chart 2: Jam Sibuk
+    const ctxHours = document.getElementById('hoursChart').getContext('2d');
+    if(chartHours) chartHours.destroy();
+    chartHours = new Chart(ctxHours, {
+        type: 'bar',
+        data: {
+            labels: sortedHours.map(h => `${h}:00`),
+            datasets: [{
+                label: 'Reservasi per Jam',
+                data: hoursData,
+                backgroundColor: '#3b82f6', borderRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Chart 3: Menu (Doughnut)
+    const ctxMenu = document.getElementById('menuChart').getContext('2d');
+    if(chartMenu) chartMenu.destroy();
+    chartMenu = new Chart(ctxMenu, {
+        type: 'doughnut',
+        data: {
+            labels: topMenus.map(i => i[0]),
+            datasets: [{
+                data: topMenus.map(i => i[1]),
+                backgroundColor: ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+    });
+
+    // --- RENDER LEADERBOARD & INSIGHTS ---
     
-    const total = monthlyCounts.reduce((a,b)=>a+b,0);
-    const max = Math.max(...monthlyCounts);
+    // Leaderboard Table
+    const tableBody = document.getElementById('top-customer-table');
+    if(tableBody) {
+        tableBody.innerHTML = topCustomers.map((c, i) => `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:8px; font-weight:600;">${i+1}. ${escapeHtml(c[0])}</td>
+                <td style="padding:8px; text-align:center;"><span class="pill" style="background:#f3f4f6;">${c[1]}x</span></td>
+            </tr>
+        `).join('');
+    }
+
+    // Quick Stats Cards
+    const totalReservations = filteredData.length;
+    const totalGuest = filteredData.reduce((acc, curr) => acc + (parseInt(curr.jumlah)||0), 0);
+    const totalRevenue = filteredData.reduce((acc, curr) => acc + (parseInt(curr.dp)||0), 0);
+
     document.getElementById('quick-insights').innerHTML = `
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;">
-            <div class="glass-panel" style="padding:15px; text-align:center;"><small>Total Tahun Ini</small><h3>${total}</h3></div>
-            <div class="glass-panel" style="padding:15px; text-align:center;"><small>Tertinggi/Bulan</small><h3>${max}</h3></div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
+            <div class="glass-panel" style="padding:15px; text-align:center; border-left:4px solid #10b981;">
+                <small>Total Reservasi</small><h3 style="margin:5px 0;">${totalReservations}</h3>
+            </div>
+            <div class="glass-panel" style="padding:15px; text-align:center; border-left:4px solid #3b82f6;">
+                <small>Total Tamu</small><h3 style="margin:5px 0;">${totalGuest}</h3>
+            </div>
+            <div class="glass-panel" style="padding:15px; text-align:center; border-left:4px solid #f59e0b;">
+                <small>Total DP Masuk</small><h3 style="margin:5px 0;">Rp ${formatRupiah(totalRevenue)}</h3>
+            </div>
         </div>`;
+        
+    showToast("Analisis Data Diperbarui");
 }
 
 function showAnalysis() {
+    // Fungsi pembuka popup analisis (jika diperlukan detail lebih lanjut)
     const popup = document.getElementById('analysisPopup');
-    popup.innerHTML = `<div class="popup-header"><h3>Analisis Detail</h3><button class="close-popup-btn" onclick="closePopup('analysisPopup')">&times;</button></div><div class="popup-content"><p>Analisis detail...</p><button class="btn-primary-gradient full-width" onclick="runUIAnalysis();closePopup('analysisPopup')">Refresh</button></div>`;
     popup.style.display='block'; overlay.style.display='block';
 }
 
@@ -2208,4 +2350,4 @@ function forceSync() { showLoader(); setTimeout(() => location.reload(), 800); }
 function toggleNotificationDropdown(e) { e.stopPropagation(); const d=document.getElementById('notification-dropdown'); d.style.display=d.style.display==='block'?'none':'block'; }
 window.addEventListener('click', () => { const d=document.getElementById('notification-dropdown'); if(d) d.style.display='none'; });
 
-console.log("Dolan Sawah App Loaded: Luxury Edition (Fixed).");
+console.log("Dolan Sawah App Loaded: Ultimate Edition.");
