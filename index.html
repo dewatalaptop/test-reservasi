@@ -110,7 +110,7 @@
                 <i class="far fa-bell"></i>
                 <span id="notification-badge" class="badge-count" style="display: none;">0</span>
                 
-                <div id="notification-dropdown" class="glass-dropdown">
+                <div id="notification-dropdown" class="notification-dropdown glass-dropdown">
                   <div class="dropdown-head">Pengingat "Say Thanks"</div>
                   <ul id="notification-list-ul"></ul>
                 </div>
@@ -175,7 +175,7 @@
       </div>
 
       <div id="tab-inbox" class="content-section">
-        <div class="section-tools">
+        <div class="section-tools" style="margin-bottom: 20px;">
             <button class="btn-primary" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Inbox</button>
         </div>
         <div id="inbox-container" class="grid-cards">
@@ -203,35 +203,35 @@
             <div class="glass-panel detail-card">
                 <div class="detail-header">
                     <h3 id="reservation-view-title">Detail Reservasi</h3>
+                    
                     <div class="detail-actions">
-    <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru">
-        <i class="fas fa-plus"></i>
-    </button>
-    
-    <div class="dropdown-wrapper" style="position:relative; display:inline-block;">
-        <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan Data">
-            <i class="fas fa-sort-amount-down"></i>
-        </button>
-        <div id="sort-dropdown" class="glass-dropdown" style="display:none; position:absolute; right:0; top:45px; width:150px; z-index:50;">
-            <div class="notification-item" onclick="applySort('jam')"><i class="far fa-clock"></i> Waktu</div>
-            <div class="notification-item" onclick="applySort('tempat')"><i class="fas fa-map-marker-alt"></i> Tempat</div>
-            <div class="notification-item" onclick="applySort('nama')"><i class="fas fa-font"></i> Nama</div>
-        </div>
-    </div>
+                        <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        
+                        <div class="dropdown-wrapper" style="position:relative; display:inline-block;">
+                            <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan Data">
+                                <i class="fas fa-sort-amount-down"></i>
+                            </button>
+                            <div id="sort-dropdown" class="glass-dropdown" style="display:none; position:absolute; right:0; top:45px; width:150px; z-index:50;">
+                                <div class="notification-item" onclick="applySort('jam')"><i class="far fa-clock"></i> Waktu</div>
+                                <div class="notification-item" onclick="applySort('tempat')"><i class="fas fa-map-marker-alt"></i> Tempat</div>
+                                <div class="notification-item" onclick="applySort('nama')"><i class="fas fa-font"></i> Nama</div>
+                            </div>
+                        </div>
 
-    <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Kirim Laporan Harian">
-        <i class="fab fa-whatsapp"></i>
-    </button>
-    
-    <button class="btn-icon" onclick="printData()" title="Cetak">
-        <i class="fas fa-print"></i>
-    </button>
-    
-    <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup">
-        <i class="fas fa-times"></i>
-    </button>
-</div>
-
+                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Kirim Laporan Harian">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>
+                        
+                        <button class="btn-icon" onclick="printData()" title="Cetak">
+                            <i class="fas fa-print"></i>
+                        </button>
+                        
+                        <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="search-wrapper">
@@ -245,55 +245,54 @@
       </div>
 
       <div id="tab-data" class="content-section">
-        <div class="data-grid">
-            <div class="glass-panel">
-                <div class="card-header-flex">
-                    <h3>Daftar Menu</h3>
-                    <button class="btn-sm btn-primary" onclick="showMenuManagement()">Kelola</button>
+        <div class="data-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div class="glass-panel" style="padding: 20px;">
+                <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">Daftar Menu</h3>
+                    <button class="btn-primary-gradient" style="width:auto; padding:8px 15px;" onclick="showMenuManagement()">Kelola</button>
                 </div>
-                <div id="preview-menu-list" class="scroll-list"></div>
+                <div id="preview-menu-list" class="scroll-list" style="max-height: 400px; overflow-y: auto;"></div>
             </div>
-            <div class="glass-panel">
-                <div class="card-header-flex">
-                    <h3>Daftar Tempat</h3>
-                    <button class="btn-sm btn-primary" onclick="showLocationManagement()">Kelola</button>
+            <div class="glass-panel" style="padding: 20px;">
+                <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">Daftar Tempat</h3>
+                    <button class="btn-primary-gradient" style="width:auto; padding:8px 15px;" onclick="showLocationManagement()">Kelola</button>
                 </div>
-                <div id="preview-location-list" class="scroll-list"></div>
+                <div id="preview-location-list" class="scroll-list" style="max-height: 400px; overflow-y: auto;"></div>
             </div>
-            <div class="glass-panel full-width">
-                 <div class="card-header"><h3>Tools Data</h3></div>
-                 <div class="tools-container">
-                    <button class="btn-tool" onclick="showExportDataPopup()"><i class="fas fa-file-code"></i> Backup Data</button>
-                    <button class="btn-tool" onclick="showCustomerMenu()"><i class="fas fa-address-book"></i> Customer DB</button>
+            <div class="glass-panel full-width" style="grid-column: 1 / -1; padding: 20px;">
+                 <div class="card-header" style="border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px; margin-bottom: 15px;"><h3>Tools Data</h3></div>
+                 <div class="tools-container" style="display: flex; gap: 15px;">
+                    <button class="btn-action" style="padding: 10px 20px; flex-direction: row;" onclick="showExportDataPopup()"><i class="fas fa-file-code"></i> Backup Data</button>
                  </div>
             </div>
         </div>
       </div>
 
       <div id="tab-broadcast" class="content-section">
-          <div class="glass-panel center-content">
-              <div class="big-icon"><i class="fab fa-whatsapp"></i></div>
+          <div class="glass-panel center-content" style="text-align: center; padding: 50px;">
+              <div class="big-icon" style="font-size: 4rem; color: #25D366; margin-bottom: 20px;"><i class="fab fa-whatsapp"></i></div>
               <h3>Broadcast Promosi</h3>
-              <p>Kirim pesan massal ke pelanggan Anda.</p>
-              <div class="action-row">
-                  <button class="btn-primary" onclick="showBroadcastSettings()">Atur Pesan</button>
-                  <button class="btn-success" onclick="showBroadcastList()">Mulai Kirim</button>
+              <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto 30px;">Kirim pesan massal ke database pelanggan yang pernah melakukan reservasi.</p>
+              <div class="action-row" style="display: flex; justify-content: center; gap: 15px;">
+                  <button class="btn-primary" style="width: auto;" onclick="showBroadcastSettings()">Atur Pesan</button>
+                  <button class="btn-primary-gradient" style="width: auto; background: var(--success);" onclick="showBroadcastList()">Mulai Kirim</button>
               </div>
           </div>
       </div>
 
       <div id="tab-analysis" class="content-section">
-        <div class="glass-panel">
-             <div class="card-header-flex">
-                <h3>Analisis Performa</h3>
-                <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-select"></select>
+        <div class="glass-panel" style="padding: 25px;">
+             <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0;">Analisis Performa</h3>
+                <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 5px 10px;"></select>
              </div>
-             <div class="chart-container">
+             <div class="chart-container" style="height: 350px;">
                  <canvas id="mainChart"></canvas>
              </div>
              <div id="quick-insights" class="insights-row"></div>
-             <div class="center-btn">
-                 <button class="btn-outline" onclick="showAnalysis()">Analisis Detail</button>
+             <div class="center-btn" style="text-align:center; margin-top:20px;">
+                 <button class="btn-action" style="display:inline-flex; width:auto;" onclick="showAnalysis()">Analisis Detail</button>
              </div>
         </div>
       </div>
@@ -308,9 +307,9 @@
                   
                   <div class="input-group-row">
                       <input type="text" id="bgUrlInput" class="glass-input" placeholder="Tempel URL Gambar di sini...">
-                      <button onclick="saveCustomBackground()" class="btn-primary">Simpan</button>
+                      <button onclick="saveCustomBackground()" class="btn-primary" style="width:auto; margin-left:10px;">Simpan</button>
                   </div>
-                  <button onclick="resetBackground()" class="btn-danger-outline btn-sm" style="margin-top:10px;">Reset Default</button>
+                  <button onclick="resetBackground()" class="btn-action" style="margin-top:10px; width:auto; padding: 8px 15px; background: rgba(239, 68, 68, 0.1); color: var(--danger);">Reset Default</button>
                   
                   <h4 style="margin-top:20px;">Rekomendasi Tema:</h4>
                   <div class="theme-grid">
@@ -339,11 +338,17 @@
   <div class="toast" id="toast"></div>
 
   <div id="addFormPopup" class="popup-glass">
-    <div class="popup-head">
-        <h3>Input Reservasi</h3>
-        <button class="close-btn" onclick="closePopup('addFormPopup')">&times;</button>
+    <div class="popup-head" style="padding: 20px 25px; background: linear-gradient(135deg, var(--primary), #34d399); color: white; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin:0; font-size:1.2rem;">Input Reservasi</h3>
+        <button class="close-btn" onclick="closePopup('addFormPopup')" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
     </div>
-    <form id="reservation-form">
+    <form id="reservation-form" style="padding: 25px;">
+      
+      <div class="form-group">
+          <label>Tanggal Reservasi</label>
+          <input type="date" id="inputDate" class="glass-input" required />
+      </div>
+
       <div class="form-group">
           <label>Nama Pemesan</label>
           <input type="text" id="nama" class="glass-input" required />
@@ -370,12 +375,12 @@
           <div class="form-group">
               <label>Tempat</label>
               <select id="tempat" class="glass-input" required onchange="updateCapacityInfo('reservation-form')"></select>
-              <small id="capacity-info"></small>
+              <small id="capacity-info" style="color:var(--primary); font-size:0.8rem;"></small>
               <span class="err-msg" id="tempat-error"></span>
           </div>
       </div>
       
-      <div class="highlight-box">
+      <div class="highlight-box" style="background:#fffbeb; border:1px dashed var(--accent); padding:10px; border-radius:10px; margin-bottom:15px;">
           <div class="form-row">
               <div class="form-group">
                   <label>DP (Rp)</label>
@@ -385,7 +390,7 @@
                   <label>Via</label>
                   <select id="tipeDp" class="glass-input">
                     <option value="">- Tanpa DP -</option><option>Transfer BCA</option>
-                    <option>Transfer Mandiri</option><option>QRIS</option><option>Cash</option>
+                    <option>Transfer Mandiri</option><option>Transfer BRI</option><option>QRIS</option><option>Cash</option>
                   </select>
               </div>
           </div>
@@ -394,7 +399,7 @@
       <div class="form-group">
           <label>Menu Pesanan <span class="err-msg" id="menus-error"></span></label>
           <div id="selected-menus-container"></div>
-          <button type="button" class="btn-dashed" id="add-menu-btn" onclick="addMenuSelectionRow('reservation-form')">
+          <button type="button" class="btn-dashed" id="add-menu-btn" onclick="addMenuSelectionRow('reservation-form')" style="width:100%; border:2px dashed #ccc; background:transparent; padding:8px; border-radius:8px; cursor:pointer;">
               + Tambah Menu
           </button>
       </div>
@@ -404,7 +409,7 @@
           <textarea id="tambahan" class="glass-input" rows="2"></textarea>
       </div>
 
-      <div class="popup-foot">
+      <div class="popup-foot" style="margin-top:20px;">
         <button type="button" class="btn-primary full-width" onclick="simpanReservasi()">Simpan</button>
       </div>
     </form>
@@ -413,40 +418,44 @@
   <div id="editFormPopup" class="popup-glass"></div>
   <div id="menuManagementPopup" class="popup-glass"></div>
   <div id="locationManagementPopup" class="popup-glass"></div>
-  <div id="customerListPopup" class="popup-glass"></div>
   <div id="analysisPopup" class="popup-glass"></div>
   <div id="broadcastListPopup" class="popup-glass large"></div>
-  <div id="broadcastMainPopup" class="popup-glass"></div>
   
   <div id="broadcastSettingsPopup" class="popup-glass">
-    <div class="popup-head"><h3>Template Pesan</h3></div>
-    <textarea id="broadcastMessage" class="glass-input" rows="5" placeholder="Halo kak..."></textarea>
-    <div class="popup-foot">
-        <button onclick="saveBroadcastMessage()" class="btn-primary">Simpan</button>
-        <button onclick="closePopup('broadcastSettingsPopup')" class="btn-outline">Tutup</button>
+    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Template Pesan</h3></div>
+    <div style="padding:20px;">
+        <textarea id="broadcastMessage" class="glass-input" rows="5" placeholder="Halo kak..."></textarea>
+        <div class="popup-foot" style="margin-top:15px; text-align:right;">
+            <button onclick="saveBroadcastMessage()" class="btn-primary">Simpan</button>
+            <button onclick="closePopup('broadcastSettingsPopup')" class="btn-action" style="width:auto;">Tutup</button>
+        </div>
     </div>
   </div>
 
   <div id="exportDataPopup" class="popup-glass">
-    <div class="popup-head"><h3>Export Data</h3></div>
-    <textarea id="export-data-output" class="glass-input code-view" readonly></textarea>
-    <div class="popup-foot">
-        <button onclick="copyExportCode()" class="btn-primary">Salin</button>
-        <button onclick="closePopup('exportDataPopup')" class="btn-outline">Tutup</button>
+    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Export Data</h3></div>
+    <div style="padding:20px;">
+        <textarea id="export-data-output" class="glass-input code-view" readonly style="height:150px; font-family:monospace;"></textarea>
+        <div class="popup-foot" style="margin-top:15px; text-align:right;">
+            <button onclick="copyExportCode()" class="btn-primary">Salin</button>
+            <button onclick="closePopup('exportDataPopup')" class="btn-action" style="width:auto;">Tutup</button>
+        </div>
     </div>
   </div>
 
   <div id="printOptionsPopup" class="popup-glass">
-    <div class="popup-head"><h3>Cetak Laporan</h3></div>
-    <div id="print-options-form" class="checklist-grid">
-        <label><input type="checkbox" id="print-detail-menu" checked> Menu</label>
-        <label><input type="checkbox" id="print-kontak" checked> Kontak</label>
-        <label><input type="checkbox" id="print-dp" checked> DP</label>
-        <label><input type="checkbox" id="print-tambahan" checked> Note</label>
-    </div>
-    <div class="popup-foot">
-        <button onclick="executePrint()" class="btn-primary">Print</button>
-        <button onclick="closePopup('printOptionsPopup')" class="btn-outline">Batal</button>
+    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Cetak Laporan</h3></div>
+    <div style="padding:20px;">
+        <div id="print-options-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
+            <label><input type="checkbox" id="print-detail-menu" checked> Rincian Menu</label>
+            <label><input type="checkbox" id="print-kontak" checked> Kontak</label>
+            <label><input type="checkbox" id="print-dp" checked> Info DP</label>
+            <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
+        </div>
+        <div class="popup-foot" style="text-align:right;">
+            <button onclick="executePrint()" class="btn-primary">Print Preview</button>
+            <button onclick="closePopup('printOptionsPopup')" class="btn-action" style="width:auto;">Batal</button>
+        </div>
     </div>
   </div>
 
