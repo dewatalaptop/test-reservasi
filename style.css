@@ -426,6 +426,35 @@ button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; 
 /* ==========================================================================
    12. PRINT STYLES (ADVANCED REPORTING)
    ========================================================================== */
+/* ==========================================================================
+   FIX: VISIBILITY & ANIMATION (Agar Dashboard tidak menumpuk)
+   ========================================================================== */
+/* Secara default sembunyikan semua section konten */
+.content-section { 
+  display: none; 
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Hanya tampilkan yang punya class active */
+.content-section.active { 
+  display: block; 
+  opacity: 1;
+  animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn { 
+  from { opacity: 0; transform: translateY(10px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
+
+/* Pastikan Layout Utama Benar */
+#app-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 @media print {
   /* Hide non-printable elements */
   .sidebar, .mobile-header, .top-header, .bg-nature, .bg-overlay-glass, 
