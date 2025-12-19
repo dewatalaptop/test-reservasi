@@ -204,11 +204,34 @@
                 <div class="detail-header">
                     <h3 id="reservation-view-title">Detail Reservasi</h3>
                     <div class="detail-actions">
-                        <button class="btn-icon" onclick="showAddForm()"><i class="fas fa-plus"></i></button>
-                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')"><i class="fab fa-whatsapp"></i></button>
-                        <button class="btn-icon" onclick="printData()"><i class="fas fa-print"></i></button>
-                        <button class="btn-icon danger" onclick="kembaliKeKalender()"><i class="fas fa-times"></i></button>
-                    </div>
+    <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru">
+        <i class="fas fa-plus"></i>
+    </button>
+    
+    <div class="dropdown-wrapper" style="position:relative; display:inline-block;">
+        <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan Data">
+            <i class="fas fa-sort-amount-down"></i>
+        </button>
+        <div id="sort-dropdown" class="glass-dropdown" style="display:none; position:absolute; right:0; top:45px; width:150px; z-index:50;">
+            <div class="notification-item" onclick="applySort('jam')"><i class="far fa-clock"></i> Waktu</div>
+            <div class="notification-item" onclick="applySort('tempat')"><i class="fas fa-map-marker-alt"></i> Tempat</div>
+            <div class="notification-item" onclick="applySort('nama')"><i class="fas fa-font"></i> Nama</div>
+        </div>
+    </div>
+
+    <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Kirim Laporan Harian">
+        <i class="fab fa-whatsapp"></i>
+    </button>
+    
+    <button class="btn-icon" onclick="printData()" title="Cetak">
+        <i class="fas fa-print"></i>
+    </button>
+    
+    <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
+
                 </div>
                 
                 <div class="search-wrapper">
