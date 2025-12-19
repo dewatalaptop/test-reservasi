@@ -1,11 +1,11 @@
 // ============================================================================
 // FILE: app.js
-// BAGIAN 1: KONFIGURASI, STATE, OTENTIKASI & UTILITIES
+// BAGIAN 1: KONFIGURASI, STATE, AUTH & UTILITIES
 // ============================================================================
 
 /**
  * 1. KONFIGURASI FIREBASE
- * Koneksi ke database backend.
+ * Pastikan config ini sesuai dengan project Anda.
  */
 const firebaseConfig = {
   apiKey: "AIzaSyA_c1tU70FM84Qi_f_aSaQ-YVLo_18lCkI",
@@ -16,7 +16,7 @@ const firebaseConfig = {
   appId: "1:213151400721:web:e51b0d8cdd24206cf682b0"
 };
 
-// Inisialisasi Firebase (Safe Check)
+// Inisialisasi Firebase (Double Check)
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 } else {
@@ -26,62 +26,57 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// Mengaktifkan persistensi login (agar tidak logout saat refresh)
+// Persistensi Session (Agar tidak logout saat refresh)
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
 
 
 /**
  * 2. VARIABEL GLOBAL (STATE MANAGEMENT)
- * Pusat penyimpanan data sementara agar aplikasi cepat dan reaktif.
+ * Pusat penyimpanan data di memori browser.
  */
 
-// Konstanta
 const monthNames = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 ];
 
-// --- Cache Data Transaksi ---
-let dataReservasi = {};       // Menyimpan data kalender (Key: "MM-DD", Value: Array Reservasi)
-let allReservationsList = []; // Array flat semua reservasi bulan ini (untuk statistik dashboard & search)
-let requestsCache = [];       // Menyimpan data inbox permintaan yang belum diapprove
-let allReservationsCache = null; // Cache berat untuk analisis tahunan (lazy load)
+// --- Data Caches ---
+let dataReservasi = {};       // Key: "MM-DD" (Untuk Kalender)
+let allReservationsList = []; // Flat Array (Untuk Dashboard & Analisis)
+let requestsCache = [];       // Inbox Request
+let allReservationsCache = null; // Cache Analisis Tahunan
 
-// --- Cache Data Master ---
-let detailMenu = {};          // Key: Nama Menu, Value: Array Detail (misal: ["Pedas", "Manis"])
-let menuPrices = {};          // Key: Nama Menu, Value: Harga (Number)
-let locationsData = {};       // Key: ID Dokumen, Value: Object {name, capacity}
+// --- Data Master Caches ---
+let detailMenu = {};          // { "Nasi Goreng": ["Pedas", "Sedang"] }
+let menuPrices = {};          // { "Nasi Goreng": 15000 }
+let locationsData = {};       // { "docId": { name: "Gazebo 1", capacity: 10 } }
 
-// --- State Navigasi & Kalender ---
-let tanggalDipilih = '';      // Format "MM-DD" saat user klik tanggal
+// --- Navigasi & Kalender ---
+let tanggalDipilih = '';      // Format "MM-DD"
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 
-// --- Listener Realtime (Disimpan untuk cleanup saat logout) ---
+// --- Listeners (Untuk Cleanup) ---
 let unsubscribeReservations = null;
 let unsubscribeRequests = null;
 
-// --- State Fitur Tambahan ---
-let hasAutoOpened = false;       // Mencegah auto-popup berulang saat deep link
-let notificationInterval = null; // Interval cek pengingat "Say Thanks"
-let promoMessageCache = null;    // Template pesan broadcast
-let allCustomersCache = [];      // Data unik customer untuk broadcast
+// --- Fitur Tambahan ---
+let hasAutoOpened = false;       // Flag Deep Link
+let notificationInterval = null; // Interval Notifikasi
+let promoMessageCache = null;    // Template Broadcast
+let allCustomersCache = [];      // Data Kontak Unik
 
-const BROADCAST_MESSAGE_KEY = 'dolanSawahBroadcastMessage'; // LocalStorage Key
+const BROADCAST_MESSAGE_KEY = 'dolanSawahBroadcastMessage'; 
+const BG_STORAGE_KEY = 'dolanSawahBg'; // Key untuk setting background
 
-
-/**
- * 3. REFERENSI DOM GLOBAL
- * Cache elemen UI yang sering diakses.
- */
+// --- UI References ---
 const loadingOverlay = document.getElementById('loadingOverlay');
 const toast = document.getElementById('toast');
 const overlay = document.getElementById('overlay');
 
 
 /**
- * 4. SISTEM OTENTIKASI (AUTH)
- * Menangani logika Login, Logout, dan Transisi UI.
+ * 3. LOGIKA OTENTIKASI & TRANSISI LAYAR
  */
 auth.onAuthStateChanged(user => {
     const loginContainer = document.getElementById('login-container');
@@ -89,34 +84,31 @@ auth.onAuthStateChanged(user => {
     
     if (user) {
         // --- USER LOGIN ---
-        console.log("Auth: User terhubung (" + user.email + ")");
+        console.log("Auth: User terhubung.");
         
-        // Transisi Tampilan
+        // Sembunyikan Login, Tampilkan App
         if(loginContainer) loginContainer.style.display = 'none';
         if(appLayout) {
             appLayout.style.display = 'block';
-            // Efek Fade In halus
+            // Animasi Fade In
             appLayout.style.opacity = 0;
             setTimeout(() => { 
-                appLayout.style.transition = 'opacity 0.5s'; 
+                appLayout.style.transition = 'opacity 0.6s ease'; 
                 appLayout.style.opacity = 1; 
-            }, 50);
+            }, 100);
         }
         
-        // Update Tanggal di Header
         updateHeaderDate();
-        
-        // Mulai Load Data Aplikasi
-        initializeApp(); 
+        applySavedBackground(); // Terapkan background custom (Fitur Baru)
+        initializeApp();        // Mulai loading data (Lanjut di Bagian 2)
         
     } else {
         // --- USER LOGOUT ---
-        console.log("Auth: User logout");
+        console.log("Auth: User logout.");
         
         if(loginContainer) loginContainer.style.display = 'flex';
         if(appLayout) appLayout.style.display = 'none';
         
-        // Bersihkan data dan listener untuk keamanan memori
         cleanupApp();
     }
 });
@@ -129,7 +121,6 @@ async function handleLogin() {
   const email = emailInput.value.trim();
   const password = passwordInput.value;
   
-  // Validasi Input
   if (!email || !password) { 
       errorEl.textContent = 'Email dan password wajib diisi.'; 
       errorEl.style.display = 'block'; 
@@ -140,18 +131,13 @@ async function handleLogin() {
   
   try { 
       await auth.signInWithEmailAndPassword(email, password); 
-      // Sukses: onAuthStateChanged akan menangani sisanya
+      // Reset Form
       emailInput.value = '';
       passwordInput.value = '';
       errorEl.style.display = 'none';
   } catch (err) { 
       console.error("Login Gagal:", err);
-      let msg = 'Kredensial tidak valid.';
-      if(err.code === 'auth/invalid-email') msg = 'Format email salah.';
-      if(err.code === 'auth/user-not-found') msg = 'User tidak ditemukan.';
-      if(err.code === 'auth/wrong-password') msg = 'Password salah.';
-      
-      errorEl.textContent = msg; 
+      errorEl.textContent = 'Email atau password salah.'; 
       errorEl.style.display = 'block'; 
   } finally { 
       hideLoader(); 
@@ -160,13 +146,14 @@ async function handleLogin() {
 
 function handleLogout() { 
     Swal.fire({
-        title: 'Logout?',
-        text: "Anda akan keluar dari dashboard admin.",
+        title: 'Keluar Dashboard?',
+        text: "Sesi Anda akan diakhiri.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Ya, Keluar'
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Keluar',
+        cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
             showLoader();
@@ -183,7 +170,7 @@ function cleanupApp() {
     if (unsubscribeReservations) unsubscribeReservations();
     if (unsubscribeRequests) unsubscribeRequests();
     
-    // Reset Variable
+    // Reset Memory
     dataReservasi = {};
     requestsCache = [];
     allReservationsList = [];
@@ -191,53 +178,53 @@ function cleanupApp() {
 
 
 /**
- * 5. NAVIGASI UI (SIDEBAR & TABS)
- * Mengatur perpindahan halaman dashboard tanpa reload (SPA Feeling).
+ * 4. SISTEM NAVIGASI (SIDEBAR & TABS)
  */
 function switchTab(tabId) {
-    // 1. Sembunyikan semua konten tab
+    // 1. Hide semua konten
     document.querySelectorAll('.content-section').forEach(el => {
         el.classList.remove('active');
-        el.style.display = 'none'; // Paksa display none untuk layout clean
+        el.style.display = 'none';
     });
 
-    // 2. Tampilkan tab yang dipilih
+    // 2. Show konten terpilih
     const target = document.getElementById('tab-' + tabId);
     if (target) {
         target.style.display = 'block';
-        setTimeout(() => target.classList.add('active'), 10); // Trigger animasi CSS
+        setTimeout(() => target.classList.add('active'), 10);
     }
     
-    // 3. Update status Active di Sidebar Menu
+    // 3. Update Sidebar Active State
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     
-    // Cari elemen nav-item yang memiliki onclick ke tabId ini
+    // Cari nav-item yg sesuai
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
-        if(item.getAttribute('onclick').includes(tabId)) {
+        if(item.getAttribute('onclick').includes(`'${tabId}'`)) {
             item.classList.add('active');
         }
     });
 
-    // 4. Update Judul Halaman
+    // 4. Update Header Title
     const titles = {
         'dashboard': 'Dashboard Overview',
         'inbox': 'Inbox Permintaan',
-        'calendar': 'Kalender Reservasi',
-        'data': 'Manajemen Data Master',
-        'broadcast': 'Broadcast Promosi',
-        'analysis': 'Analisis Bisnis'
+        'calendar': 'Kalender Utama',
+        'data': 'Data Master',
+        'broadcast': 'Broadcast WA',
+        'analysis': 'Analisis Data',
+        'settings': 'Pengaturan Tampilan'
     };
     const titleEl = document.getElementById('page-title');
     if(titleEl) titleEl.innerText = titles[tabId] || 'Dashboard';
 
-    // 5. UX Mobile: Tutup sidebar otomatis setelah klik menu
+    // 5. Mobile UX: Tutup sidebar otomatis
     if(window.innerWidth < 768) {
         const sidebar = document.getElementById('sidebar');
         if(sidebar && sidebar.classList.contains('open')) toggleSidebar();
     }
 
-    // 6. Trigger Khusus (Lazy Load Chart)
+    // 6. Trigger Lazy Load (Chart)
     if(tabId === 'analysis' && typeof runUIAnalysis === 'function') {
         runUIAnalysis();
     }
@@ -245,15 +232,10 @@ function switchTab(tabId) {
 
 function toggleSidebar() {
     const sb = document.getElementById('sidebar');
-    const btn = document.getElementById('mobile-toggle');
     sb.classList.toggle('open');
-    
-    // Ubah ikon toggle
-    btn.innerHTML = sb.classList.contains('open') 
-        ? '<i class="fas fa-times"></i>' 
-        : '<i class="fas fa-bars"></i>';
 }
 
+// Update Tanggal Header
 function updateHeaderDate() {
     const el = document.getElementById('current-date-display');
     if(el) {
@@ -266,29 +248,28 @@ function updateHeaderDate() {
 
 
 /**
- * 6. FUNGSI UTILITIES & HELPERS
- * Fungsi pendukung yang digunakan di seluruh aplikasi.
+ * 5. FUNGSI UTILITAS (HELPERS)
  */
 
-// Format Rupiah (Rp 10.000)
+// Format Rupiah
 function formatRupiah(amount) {
     if (amount === null || amount === undefined || isNaN(amount)) return '0';
     return Number(amount).toLocaleString('id-ID');
 }
 
-// Bersihkan No HP (0812-345 -> 0812345)
+// Bersihkan No HP
 function cleanPhoneNumber(phone) { 
     if(!phone) return '';
     return phone.toString().replace(/[^0-9]/g, ''); 
 }
 
-// Validasi Format HP (10-14 digit)
+// Validasi HP
 function isValidPhone(phone) { 
     const cleaned = cleanPhoneNumber(phone);
     return /^[0-9]{10,14}$/.test(cleaned); 
 }
 
-// Keamanan: Escape HTML untuk mencegah XSS
+// Escape HTML (Security)
 function escapeHtml(text) {
   if (!text) return text;
   return text
@@ -299,38 +280,41 @@ function escapeHtml(text) {
       .replace(/'/g, "&#039;");
 }
 
-// UI: Toast Notification
+// Toast Notification
 function showToast(message, type = 'success') {
-    toast.innerHTML = type === 'error' 
-        ? `<i class="fas fa-exclamation-circle"></i> ${message}`
-        : `<i class="fas fa-check-circle"></i> ${message}`;
+    // Icon based on type
+    let icon = type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
     
+    toast.innerHTML = `${icon} &nbsp; ${message}`;
     toast.className = `toast ${type}`;
     toast.style.display = 'block';
     
-    // Animasi Masuk
-    setTimeout(() => { toast.style.transform = 'translateX(-50%) translateY(0)'; toast.style.opacity = 1; }, 10);
-
-    // Hilang Otomatis
+    // Animation In
     setTimeout(() => { 
-        toast.style.transform = 'translateX(-50%) translateY(20px)'; 
+        toast.style.opacity = 1; 
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    }, 10);
+
+    // Auto Hide
+    setTimeout(() => { 
         toast.style.opacity = 0;
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
         setTimeout(() => { toast.style.display = 'none'; }, 300);
     }, 3500);
 }
 
-// UI: Loading Spinner
+// Loader Control
 function showLoader() { if(loadingOverlay) loadingOverlay.style.display = 'flex'; }
 function hideLoader() { if(loadingOverlay) loadingOverlay.style.display = 'none'; }
 
-// UI: Tutup Popup
+// Popup Control
 function closePopup(popupId) {
     const popup = document.getElementById(popupId);
     if(popup) popup.style.display = 'none';
     if(overlay) overlay.style.display = 'none';
 }
 
-// Helper: Deteksi klik di luar sidebar (Mobile)
+// Mobile: Close Sidebar on Outside Click
 document.addEventListener('click', (e) => {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('mobile-toggle');
@@ -342,7 +326,7 @@ document.addEventListener('click', (e) => {
 });
 // ============================================================================
 // FILE: app.js
-// BAGIAN 2: DATA INITIALIZATION & INBOX SYSTEM (RICH FEATURES)
+// BAGIAN 2: DATA INITIALIZATION & INBOX SYSTEM (SMART LOGIC)
 // ============================================================================
 
 /**
@@ -377,11 +361,11 @@ async function initializeApp() {
     ]);
 
     // 3. Setup Listeners Realtime (Data Transaksi)
-    loadReservationsForCurrentMonth(); // Listener Kalender (Bagian 3)
+    loadReservationsForCurrentMonth(); // Listener Kalender (Ada di Bagian 3)
     initInboxListener();               // Listener Inbox Request
     
     // 4. Setup Background Jobs
-    setupReliableNotificationChecker(); // Cek pengingat "Say Thanks" (Bagian 5)
+    setupReliableNotificationChecker(); // Cek pengingat "Say Thanks" (Ada di Bagian 5)
 
     console.log("System: Inisialisasi Selesai.");
 
@@ -395,7 +379,7 @@ async function initializeApp() {
 
 /**
  * 8. LOAD DATA MASTER (MENU & LOKASI)
- * Mengambil data referensi untuk validasi dan UI.
+ * Mengambil data referensi untuk validasi dan UI Data Master.
  */
 async function loadMenus() {
   try {
@@ -410,7 +394,7 @@ async function loadMenus() {
     let htmlContent = '';
 
     if (snapshot.empty) {
-        if(previewList) previewList.innerHTML = '<div class="text-center text-muted p-3">Belum ada data menu.</div>';
+        if(previewList) previewList.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Belum ada data menu.</div>';
         return;
     }
 
@@ -421,16 +405,16 @@ async function loadMenus() {
         detailMenu[doc.id] = data.details || []; 
         menuPrices[doc.id] = data.price || 0;
         
-        // Render Item List (Desain Modern)
+        // Render Item List (Sesuai CSS Baru)
         htmlContent += `
         <div class="menu-item">
             <div style="flex:1;">
-                <div style="font-weight:600; color:var(--text-main);">${escapeHtml(doc.id)}</div>
-                <div style="font-size:0.8rem; color:var(--text-muted);">
+                <div style="font-weight:700; color:var(--text-main); font-size:0.95rem;">${escapeHtml(doc.id)}</div>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
                     ${data.details && data.details.length ? data.details.join(', ') : '-'}
                 </div>
             </div>
-            <div style="font-weight:600; color:var(--success);">
+            <div style="font-weight:700; color:var(--success); font-size:0.9rem;">
                 Rp ${formatRupiah(data.price)}
             </div>
         </div>`;
@@ -454,7 +438,7 @@ async function loadLocations() {
         let htmlContent = '';
 
         if (snapshot.empty) {
-            if(previewList) previewList.innerHTML = '<div class="text-center text-muted p-3">Belum ada lokasi.</div>';
+            if(previewList) previewList.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);">Belum ada lokasi.</div>';
             return;
         }
 
@@ -471,9 +455,9 @@ async function loadLocations() {
             htmlContent += `
             <div class="menu-item">
                 <div style="flex:1;">
-                    <div style="font-weight:600; color:var(--text-main);">${escapeHtml(data.name)}</div>
+                    <div style="font-weight:700; color:var(--text-main); font-size:0.95rem;">${escapeHtml(data.name)}</div>
                 </div>
-                <div class="pill pill-primary">
+                <div class="pill" style="background:var(--primary-light); color:var(--primary-dark);">
                     Kap: ${data.capacity} Org
                 </div>
             </div>`;
@@ -490,7 +474,7 @@ async function loadLocations() {
 
 
 /**
- * 9. SISTEM INBOX PERMINTAAN (INTEGRASI WEB 2)
+ * 9. SISTEM INBOX PERMINTAAN (INTEGRASI PENUH)
  * Menangani reservasi yang masuk dari form customer (Status: Pending).
  */
 function initInboxListener() {
@@ -548,7 +532,7 @@ function renderInboxUI() {
         <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--text-muted);">
             <div style="font-size:3rem; opacity:0.3; margin-bottom:15px;"><i class="fas fa-inbox"></i></div>
             <h4 style="margin:0;">Inbox Bersih</h4>
-            <p style="font-size:0.9rem;">Tidak ada permintaan reservasi baru saat ini.</p>
+            <p style="font-size:0.9rem; margin-top:5px;">Tidak ada permintaan reservasi baru saat ini.</p>
         </div>`;
         return;
     }
@@ -565,18 +549,18 @@ function renderInboxUI() {
                 const subtotal = unitPrice * m.quantity;
                 
                 return `
-                <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:4px 0; border-bottom:1px solid rgba(0,0,0,0.03);">
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:4px 0; border-bottom:1px solid rgba(0,0,0,0.05);">
                     <span><b>${m.quantity}x</b> ${escapeHtml(m.name)}</span>
-                    <span style="color:#666;">Rp ${formatRupiah(subtotal)}</span>
+                    <span style="color:var(--text-muted);">Rp ${formatRupiah(subtotal)}</span>
                 </div>`;
             }).join('');
             
-            menuHtml = `<div style="padding:10px; background:rgba(255,255,255,0.5); border-radius:8px;">${listItems}</div>`;
+            menuHtml = `<div style="padding:10px;">${listItems}</div>`;
         }
 
         // Label Sumber (Via Web / Manual)
         const viaBadge = r.via 
-            ? `<span class="req-via" style="background:#e0f2fe; color:#0284c7;">${escapeHtml(r.via)}</span>` 
+            ? `<span class="req-via">${escapeHtml(r.via)}</span>` 
             : `<span class="req-via">Web</span>`;
 
         return `
@@ -591,28 +575,28 @@ function renderInboxUI() {
             
             <div class="req-details">
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                    <div style="background:#f8fafc; padding:8px; border-radius:8px; text-align:center;">
-                        <i class="far fa-calendar-alt" style="color:var(--primary);"></i>
-                        <div style="font-weight:600; font-size:0.9rem;">${escapeHtml(r.date)}</div>
+                    <div style="background:rgba(0,0,0,0.03); padding:8px; border-radius:10px; text-align:center;">
+                        <i class="far fa-calendar-alt" style="color:var(--primary); margin-bottom:4px;"></i>
+                        <div style="font-weight:700; font-size:0.9rem;">${escapeHtml(r.date)}</div>
                     </div>
-                    <div style="background:#f8fafc; padding:8px; border-radius:8px; text-align:center;">
-                        <i class="far fa-clock" style="color:var(--primary);"></i>
-                        <div style="font-weight:600; font-size:0.9rem;">${escapeHtml(r.jam)}</div>
+                    <div style="background:rgba(0,0,0,0.03); padding:8px; border-radius:10px; text-align:center;">
+                        <i class="far fa-clock" style="color:var(--primary); margin-bottom:4px;"></i>
+                        <div style="font-weight:700; font-size:0.9rem;">${escapeHtml(r.jam)}</div>
                     </div>
                 </div>
-                <div style="display:flex; justify-content:space-between; padding:0 5px;">
-                    <span><i class="fas fa-users" style="color:var(--primary);"></i> ${r.jumlah} Org</span>
+                <div style="display:flex; justify-content:space-between; padding:0 5px; font-size:0.9rem; color:var(--text-main);">
+                    <span><i class="fas fa-users" style="color:var(--primary);"></i> <b>${r.jumlah}</b> Orang</span>
                     <span><i class="fas fa-map-marker-alt" style="color:var(--primary);"></i> ${escapeHtml(r.tempat)}</span>
                 </div>
             </div>
             
             <div class="req-menu-box" style="margin:15px 0;">
-                <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:5px;">Rincian Pesanan</div>
+                <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--accent); margin-bottom:5px; padding-left:10px;">Rincian Pesanan</div>
                 ${menuHtml}
             </div>
             
             ${r.tambahan ? `
-            <div style="font-size:0.85rem; color:#d97706; background:#fffbeb; padding:10px; border-radius:8px; margin-bottom:15px; border-left:3px solid #f59e0b;">
+            <div style="font-size:0.85rem; color:#d97706; background:#fffbeb; padding:10px; border-radius:10px; margin-bottom:15px; border-left:3px solid #f59e0b;">
                 <i class="fas fa-sticky-note"></i> <b>Catatan:</b> ${escapeHtml(r.tambahan)}
             </div>` : ''}
             
@@ -643,7 +627,7 @@ function prepareInboxChat(id) {
     let totalFood = 0;
     let orderSummary = "";
     
-    // Kalkulasi Total Harga berdasarkan Cache Harga
+    // Kalkulasi Total Harga berdasarkan Cache Harga (menuPrices)
     if (r.menus && Array.isArray(r.menus)) {
         r.menus.forEach(m => {
             let unitPrice = menuPrices[m.name] || 0;
@@ -653,7 +637,7 @@ function prepareInboxChat(id) {
         });
     }
     
-    // Kalkulasi DP (Contoh logika: 50% dari total)
+    // Kalkulasi DP (Logika: 50% dari total)
     let grandTotal = totalFood; 
     let dpAmount = grandTotal > 0 ? grandTotal * 0.5 : 0; 
 
@@ -698,12 +682,12 @@ async function approveRequest(id) {
         title: `<h3 style="color:var(--primary)">Approve: ${req.nama}</h3>`,
         html: `
             <div style="text-align:left; margin-bottom:15px;">
-                <label style="font-weight:600; font-size:0.9rem;">Nominal DP Masuk (Rp)</label>
-                <input id="swal-input-dp" type="number" class="swal2-input" placeholder="0" style="margin-top:5px;">
+                <label style="font-weight:600; font-size:0.9rem; color:#666;">Nominal DP Masuk (Rp)</label>
+                <input id="swal-input-dp" type="number" class="swal2-input" placeholder="0" style="margin-top:5px; border-radius:10px;">
             </div>
             <div style="text-align:left;">
-                <label style="font-weight:600; font-size:0.9rem;">Metode Pembayaran</label>
-                <select id="swal-input-type" class="swal2-select" style="display:block; width:100%; margin-top:5px;">
+                <label style="font-weight:600; font-size:0.9rem; color:#666;">Metode Pembayaran</label>
+                <select id="swal-input-type" class="swal2-select" style="display:block; width:100%; margin-top:5px; border-radius:10px;">
                     <option value="Transfer BCA">Transfer BCA</option>
                     <option value="Transfer Mandiri">Transfer Mandiri</option>
                     <option value="Transfer BRI">Transfer BRI</option>
@@ -715,7 +699,7 @@ async function approveRequest(id) {
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Simpan & Approve',
-        confirmButtonColor: 'var(--primary)',
+        confirmButtonColor: '#059669', // Emerald Green
         cancelButtonText: 'Batal',
         preConfirm: () => {
             return {
@@ -776,7 +760,7 @@ async function rejectRequest(id) {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#64748b',
+        cancelButtonColor: '#94a3b8',
         confirmButtonText: 'Ya, Tolak',
         cancelButtonText: 'Batal'
     });
@@ -796,16 +780,16 @@ async function rejectRequest(id) {
 }
 // ============================================================================
 // FILE: app.js
-// BAGIAN 3: SYSTEM KALENDER UTAMA, DETAIL VIEW & DASHBOARD STATS
+// BAGIAN 3: KALENDER CORE, DETAIL VIEW & DASHBOARD STATS
 // ============================================================================
 
 /**
- * 13. LOAD RESERVASI BULANAN (CORE LISTENER)
- * Mengambil data reservasi range 1 bulan penuh secara realtime.
- * Data ini digunakan sekaligus untuk Kalender dan Statistik Dashboard.
+ * 13. LOAD RESERVASI BULANAN (REALTIME LISTENER)
+ * Mengambil data reservasi range 1 bulan penuh.
+ * Data ini digunakan untuk mewarnai Kalender DAN menghitung Statistik Dashboard.
  */
 function loadReservationsForCurrentMonth() {
-  // Matikan listener sebelumnya agar tidak menumpuk saat ganti bulan/tahun
+  // Matikan listener lama agar tidak menumpuk saat ganti bulan
   if (unsubscribeReservations) unsubscribeReservations();
   
   showLoader();
@@ -815,7 +799,7 @@ function loadReservationsForCurrentMonth() {
   const monthStr = String(currentMonth + 1).padStart(2, '0');
   const startDate = `${currentYear}-${monthStr}-01`;
   
-  // Cari tanggal terakhir bulan ini
+  // Cari tanggal terakhir bulan ini (misal: 28, 30, atau 31)
   const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
   const endDate = `${currentYear}-${monthStr}-${lastDay}`;
   
@@ -827,15 +811,15 @@ function loadReservationsForCurrentMonth() {
     .onSnapshot( snapshot => {
         // Reset Cache Lokal
         dataReservasi = {};       // Grouping per tanggal (Key: "MM-DD")
-        allReservationsList = []; // Flat list untuk statistik
+        allReservationsList = []; // Flat list untuk statistik dashboard
 
         snapshot.forEach(doc => {
           const r = { id: doc.id, ...doc.data() };
           
-          // Masukkan ke Flat List (untuk statistik dashboard & search global)
+          // Masukkan ke Flat List (untuk widget dashboard)
           allReservationsList.push(r);
 
-          // Masukkan ke Grouping Tanggal (untuk render kalender)
+          // Masukkan ke Grouping Tanggal (untuk grid kalender)
           // Kita ambil substring "MM-DD" dari string "YYYY-MM-DD"
           const dateKey = r.date.substring(5); 
           
@@ -851,11 +835,11 @@ function loadReservationsForCurrentMonth() {
         // 2. Update Widget & List di Halaman Dashboard
         updateDashboardWidgets(allReservationsList);
 
-        // 3. Cek Auto Open (Deep Link dari WA, jika ada parameter di URL)
+        // 3. Cek Auto Open (Deep Link dari notifikasi WA)
         handleAutoOpen();
 
-        // 4. Jika user sedang membuka detail tanggal tertentu, refresh list-nya secara realtime
-        // (Agar jika ada data baru masuk di tanggal yg sedang dibuka, langsung muncul tanpa refresh)
+        // 4. Jika user sedang membuka detail tanggal tertentu, refresh list-nya
+        // (Agar jika ada data baru masuk di tanggal yg sedang dibuka, langsung muncul)
         if (tanggalDipilih && !hasAutoOpened) {
             const reservations = dataReservasi[tanggalDipilih] || [];
             updateReservationList(reservations);
@@ -865,7 +849,7 @@ function loadReservationsForCurrentMonth() {
       }, 
       err => { 
           console.error("Reservation Listener Error:", err);
-          showToast("Gagal memuat data kalender. Periksa koneksi.", "error");
+          showToast("Gagal memuat data kalender. Cek koneksi.", "error");
           hideLoader(); 
       }
     );
@@ -874,7 +858,7 @@ function loadReservationsForCurrentMonth() {
 
 /**
  * 14. UPDATE DASHBOARD WIDGETS
- * Menghitung statistik dan menampilkan "Reservasi Terbaru" di tab Dashboard.
+ * Menghitung angka-angka statistik di halaman depan secara otomatis.
  */
 function updateDashboardWidgets(allData) {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -886,7 +870,7 @@ function updateDashboardWidgets(allData) {
     if(statToday) statToday.textContent = todayCount;
 
     // --- Widget 2: Omzet DP Bulan Ini ---
-    // Menjumlahkan field 'dp' dari semua reservasi yang termuat (bulan ini)
+    // Menjumlahkan field 'dp' dari semua reservasi yang termuat
     const totalDp = allData.reduce((acc, curr) => acc + (parseInt(curr.dp) || 0), 0);
     const statRev = document.getElementById('stat-revenue-month');
     if(statRev) statRev.textContent = 'Rp ' + formatRupiah(totalDp);
@@ -895,7 +879,6 @@ function updateDashboardWidgets(allData) {
     const recentListContainer = document.getElementById('dashboard-recent-list');
     if (recentListContainer) {
         // Sort berdasarkan waktu input (createdAt) descending
-        // Handle null safety jika ada data lama tanpa createdAt
         const sortedRecent = [...allData].sort((a,b) => {
             const timeA = a.createdAt ? a.createdAt.seconds : 0;
             const timeB = b.createdAt ? b.createdAt.seconds : 0;
@@ -908,14 +891,14 @@ function updateDashboardWidgets(allData) {
             recentListContainer.innerHTML = sortedRecent.map(r => `
                 <div class="reservation-list-item">
                     <div style="flex:1;">
-                        <div style="font-weight:600; color:var(--text-main);">${escapeHtml(r.nama)}</div>
+                        <div style="font-weight:700; color:var(--text-main); font-size:0.95rem;">${escapeHtml(r.nama)}</div>
                         <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
                             <i class="far fa-calendar"></i> ${r.date} &bull; <i class="far fa-clock"></i> ${r.jam}
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <span class="pill pill-primary" style="font-size:0.8rem;">${r.jumlah} Org</span>
-                        <div style="font-size:0.75rem; color:#888; margin-top:2px;">${escapeHtml(r.tempat)}</div>
+                        <span class="pill" style="background:var(--primary-light); color:var(--primary-dark);">${r.jumlah} Org</span>
+                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(r.tempat)}</div>
                     </div>
                 </div>
             `).join('');
@@ -925,9 +908,9 @@ function updateDashboardWidgets(allData) {
 
 
 /**
- * 15. RENDER GRID KALENDER
+ * 15. RENDER GRID KALENDER (PRESISI)
  * Membuat kotak-kotak tanggal sesuai bulan yang dipilih.
- * Logika Grid: Minggu (0) sampai Sabtu (6).
+ * Menggunakan Filler Divs agar hari Senin jatuh di kolom Senin.
  */
 function buatKalender() {
   const calendarEl = document.getElementById('calendar');
@@ -939,28 +922,29 @@ function buatKalender() {
   monthYearEl.textContent = `${monthNames[currentMonth]} ${currentYear}`;
   
   // Logika Hari: Mencari hari apa tanggal 1 dimulai
-  const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Minggu
+  // getDay(): 0 = Minggu, 1 = Senin, dst.
+  const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay(); 
   
   // Total hari dalam bulan ini
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate(); 
   
-  // Render Filler (Kotak kosong transparan sebelum tanggal 1)
+  // Render Filler (Kotak transparan sebelum tanggal 1)
+  // Ini PENTING agar grid rapi sesuai hari
   for (let i = 0; i < firstDayIndex; i++) { 
       calendarEl.insertAdjacentHTML('beforeend', `<div class="calendar-day disabled" style="cursor:default; background:transparent; border:none; box-shadow:none;"></div>`); 
   }
   
   // Render Tanggal 1 s/d Akhir
   for (let i = 1; i <= daysInMonth; i++) {
-    // Key format: "MM-DD"
     const dateKey = `${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
     
     // Cek Status Hari Ini
     const isToday = new Date().toDateString() === new Date(currentYear, currentMonth, i).toDateString() ? 'today' : '';
     
-    // Cek Status Terpilih
+    // Cek Status Terpilih (Highlight)
     const isSelected = dateKey === tanggalDipilih ? 'selected' : '';
     
-    // Hitung Jumlah Reservasi
+    // Hitung Jumlah Reservasi pada tanggal ini
     const dailyData = dataReservasi[dateKey] || [];
     const countHTML = dailyData.length > 0 
         ? `<span class="reservation-count">${dailyData.length} Res</span>` 
@@ -993,7 +977,7 @@ function pilihTanggal(day) {
   // Update Judul Section Detail
   const viewTitle = document.getElementById('reservation-view-title');
   if(viewTitle) {
-      viewTitle.innerHTML = `<i class="far fa-calendar-check"></i> Reservasi: ${day} ${monthNames[currentMonth]} ${currentYear}`;
+      viewTitle.innerHTML = `${day} ${monthNames[currentMonth]} ${currentYear}`;
   }
   
   // Reset Search Bar Detail
@@ -1003,18 +987,21 @@ function pilihTanggal(day) {
   // Render List Detail
   updateReservationList(reservations); 
   
-  // Tampilkan Container Detail & Scroll ke sana dengan mulus
+  // Tampilkan Container Detail & Scroll ke sana dengan animasi halus
   const viewContainer = document.getElementById('reservation-view-container');
   if(viewContainer) {
       viewContainer.style.display = 'block';
-      viewContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Smooth scroll ke detail view
+      viewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 }
 
-// Tutup Detail View (Tombol X atau Navigasi)
+// Tutup Detail View
 function kembaliKeKalender() {
   const viewContainer = document.getElementById('reservation-view-container');
-  if(viewContainer) viewContainer.style.display = 'none';
+  if(viewContainer) {
+      viewContainer.style.display = 'none';
+  }
   
   tanggalDipilih = ''; // Reset pilihan
   buatKalender();      // Hapus highlight
@@ -1022,7 +1009,7 @@ function kembaliKeKalender() {
 
 
 /**
- * 17. RENDER LIST DETAIL RESERVASI (KARTU DETAIL)
+ * 17. RENDER LIST DETAIL RESERVASI (KARTU PREMIUM)
  * Menampilkan kartu detail untuk setiap reservasi di tanggal yang dipilih.
  * Termasuk logika tombol "Say Thanks", indikator DP, dan rincian menu.
  */
@@ -1036,7 +1023,7 @@ function updateReservationList(reservations) {
         <div style="grid-column:1/-1; text-align:center; padding:40px 20px; color:var(--text-muted);">
             <i class="far fa-calendar-times fa-3x" style="margin-bottom:15px; opacity:0.3;"></i>
             <p>Tidak ada reservasi untuk tanggal ini.</p>
-            <button class="btn-sm btn-primary" onclick="showAddForm()" style="margin-top:10px;">
+            <button class="btn-primary-gradient" onclick="showAddForm()" style="margin-top:10px; width:auto;">
                 <i class="fas fa-plus"></i> Tambah Baru
             </button>
         </div>`; 
@@ -1048,16 +1035,14 @@ function updateReservationList(reservations) {
     
     container.innerHTML = sortedRes.map(r => {
         // --- LOGIKA RENDER MENU ---
-        // Mendukung format baru (Array Object) dan format lama (String)
         let menuItemsHtml = "<small style='color:#ccc; font-style:italic;'>Tidak ada menu</small>";
         
         if (Array.isArray(r.menus) && r.menus.length > 0) {
             // Format Baru: Tampilkan list rapi
             menuItemsHtml = r.menus.map(item => {
-                // Ambil detail menu dari master data (jika ada)
                 const details = detailMenu[item.name] || [];
                 const detailStr = details.length > 0 
-                    ? `<div style="font-size:0.75rem; color:#888; margin-left:18px;">- ${details.join(', ')}</div>` 
+                    ? `<div style="font-size:0.75rem; color:#888; margin-left:15px;">- ${details.join(', ')}</div>` 
                     : '';
                 return `<div style="margin-bottom:4px;">
                             <b>${item.quantity}x</b> ${escapeHtml(item.name)}
@@ -1071,58 +1056,59 @@ function updateReservationList(reservations) {
 
         // --- LOGIKA BADGE DP ---
         const dpInfo = r.dp > 0 
-            ? `<span class="pill" style="background:#dcfce7; color:#166534; font-size:0.75rem; border:1px solid #bbf7d0;">
+            ? `<span class="pill" style="background:#dcfce7; color:#166534; border:1px solid #bbf7d0;">
                 <i class="fas fa-check"></i> DP: Rp${formatRupiah(r.dp)} (${r.tipeDp || '?'})
                </span>` 
-            : `<span class="pill" style="background:#fee2e2; color:#991b1b; font-size:0.75rem; border:1px solid #fecaca;">
+            : `<span class="pill" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca;">
                 <i class="fas fa-exclamation-circle"></i> Tanpa DP
                </span>`;
         
         // --- LOGIKA TOMBOL 'SAY THANKS' ---
-        // Tombol berubah status jika ucapan sudah dikirim
         let thanksBtn = '';
         if(r.nomorHp) {
             if (r.thankYouSent) {
-                thanksBtn = `<button class="btn-sm btn-secondary-outlined" disabled style="opacity:0.6; cursor:default; border-color:#ccc; color:#888;">
-                                <i class="fas fa-check-double"></i> Thanks Sent
+                thanksBtn = `<button class="btn-icon" disabled style="background:#e2e8f0; color:#94a3b8; cursor:default;" title="Sudah dikirim">
+                                <i class="fas fa-check-double"></i>
                              </button>`;
             } else {
-                thanksBtn = `<button class="btn-sm btn-info" id="thank-btn-${r.id}" onclick="sendThankYouMessage('${r.id}', '${escapeHtml(r.nama)}', '${r.nomorHp}')">
-                                <i class="fas fa-gift"></i> Say Thanks
+                thanksBtn = `<button class="btn-icon info" id="thank-btn-${r.id}" onclick="sendThankYouMessage('${r.id}', '${escapeHtml(r.nama)}', '${r.nomorHp}')" title="Kirim Ucapan Terima Kasih">
+                                <i class="fas fa-gift"></i>
                              </button>`;
             }
         }
 
         // --- RENDER KARTU HTML ---
         return `
-        <div class="reservation-item glass-card" style="margin:0; padding:20px;">
+        <div class="reservation-item glass-card" style="margin:0; padding:20px; border-left:4px solid var(--primary);">
+            
             <div style="border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:10px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:5px;">
-                    <h4 style="margin:0; color:var(--primary-dark); font-size:1.1rem;">${escapeHtml(r.nama)}</h4>
+                    <h4 style="margin:0; color:var(--text-main); font-size:1.1rem;">${escapeHtml(r.nama)}</h4>
                     ${dpInfo}
                 </div>
-                <div style="font-size:0.9rem; color:#555; display:flex; gap:12px; flex-wrap:wrap;">
-                    <span><i class="fas fa-clock" style="color:var(--primary);"></i> ${r.jam}</span>
+                <div style="font-size:0.9rem; color:var(--text-muted); display:flex; gap:15px; flex-wrap:wrap;">
+                    <span><i class="far fa-clock" style="color:var(--primary);"></i> ${r.jam}</span>
                     <span><i class="fas fa-map-marker-alt" style="color:var(--primary);"></i> ${escapeHtml(r.tempat)}</span>
-                    <span><i class="fas fa-users" style="color:var(--primary);"></i> <b>${r.jumlah}</b> Org</span>
+                    <span><i class="fas fa-users" style="color:var(--primary);"></i> <b>${r.jumlah}</b> Pax</span>
                 </div>
                 ${r.nomorHp ? `<div style="font-size:0.85rem; color:#666; margin-top:5px;"><i class="fas fa-phone"></i> ${r.nomorHp}</div>` : ''}
             </div>
             
             <div class="menu-detail">
-                <div style="display:flex; align-items:center; gap:5px; color:var(--accent); font-weight:600; margin-bottom:5px; font-size:0.85rem;">
-                    <i class="fas fa-utensils"></i> RINCIAN PESANAN:
+                <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:var(--accent); margin-bottom:5px;">
+                    Pesanan:
                 </div>
                 <div style="padding-left:5px;">${menuItemsHtml}</div>
             </div>
             
-            ${r.tambahan ? `<div style="font-size:0.85rem; color:#d97706; margin-top:8px; background:#fffbeb; padding:8px; border-radius:6px; border:1px dashed #fcd34d;"><i class="fas fa-comment-dots"></i> <b>Catatan:</b> ${escapeHtml(r.tambahan)}</div>` : ''}
+            ${r.tambahan ? `<div style="font-size:0.85rem; color:#d97706; margin-top:8px; background:#fffbeb; padding:8px; border-radius:8px; border:1px dashed #fcd34d;"><i class="fas fa-comment-dots"></i> <b>Note:</b> ${escapeHtml(r.tambahan)}</div>` : ''}
             
-            <div style="display:flex; gap:8px; margin-top:15px; flex-wrap:wrap; border-top:1px solid rgba(0,0,0,0.05); padding-top:12px;">
-                ${r.nomorHp ? `<button class="btn-sm btn-whatsapp" onclick="contactViaWhatsApp('${r.id}')"><i class="fab fa-whatsapp"></i> Chat</button>` : ''}
+            <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; border-top:1px solid rgba(0,0,0,0.05); padding-top:12px;">
+                ${r.nomorHp ? `<button class="btn-icon whatsapp" onclick="contactViaWhatsApp('${r.id}')" title="Chat WA"><i class="fab fa-whatsapp"></i></button>` : ''}
                 ${thanksBtn}
-                <div style="flex:1;"></div> <button class="btn-sm btn-secondary-outlined" onclick="editReservasi('${r.id}')" title="Edit Data"><i class="fas fa-edit"></i></button>
-                <button class="btn-sm btn-danger-outlined" onclick="hapusReservasi('${r.id}')" title="Hapus Data"><i class="fas fa-trash"></i></button>
+                
+                <div style="flex:1;"></div> <button class="btn-icon" style="background:var(--text-muted);" onclick="editReservasi('${r.id}')" title="Edit Data"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon danger" onclick="hapusReservasi('${r.id}')" title="Hapus Data"><i class="fas fa-trash"></i></button>
             </div>
         </div>`;
     }).join('');
@@ -1131,7 +1117,7 @@ function updateReservationList(reservations) {
 
 /**
  * 18. NAVIGASI BULAN & SEARCH
- * Fungsi helper untuk navigasi kalender.
+ * Helper function untuk kontrol kalender.
  */
 function navigateMonth(direction) {
     currentMonth += direction;
@@ -1206,7 +1192,7 @@ function handleAutoOpen() {
                     }
                 }
                 
-                hasAutoOpened = true; // Tandai selesai agar tidak popup terus
+                hasAutoOpened = true; 
                 showToast("Membuka data reservasi...");
                 
                 // Bersihkan URL agar bersih (optional)
@@ -1230,14 +1216,14 @@ function showAddForm() {
 
     // Reset Form & Error Messages
     form.reset();
-    document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-    document.querySelectorAll('.form-input').forEach(el => el.classList.remove('input-error'));
+    document.querySelectorAll('.err-msg').forEach(el => el.textContent = '');
     
     // Validasi UI: Pastikan tanggal sudah dipilih di kalender
-    // Jika belum (misal dari tombol Quick Action), default ke hari ini
+    // Jika belum (misal dari tombol Quick Action di dashboard), default ke hari ini
     if (!tanggalDipilih) {
         const now = new Date();
         tanggalDipilih = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        // Opsional: set view title jika perlu, tapi biarkan background process menanganinya
     }
 
     // Populate Dropdown Lokasi (Dari Data Master yang sudah diload di Bagian 2)
@@ -1286,7 +1272,7 @@ function editReservasi(id) {
   const formContainer = document.getElementById('editFormPopup');
   
   formContainer.innerHTML = `
-    <div class="popup-header" style="background: linear-gradient(135deg, var(--accent), #b45309);">
+    <div class="popup-header">
         <h3><i class="fas fa-edit"></i> Edit Data</h3>
         <button class="close-popup-btn" onclick="closePopup('editFormPopup')">&times;</button>
     </div>
@@ -1295,46 +1281,46 @@ function editReservasi(id) {
       
       <div class="form-group">
           <label>Nama Pemesan</label>
-          <input type="text" id="nama" class="form-input" value="${escapeHtml(res.nama || '')}" required />
-          <span class="error-message" id="nama-error"></span>
+          <input type="text" id="nama" class="glass-input" value="${escapeHtml(res.nama || '')}" required />
+          <span class="err-msg" id="nama-error"></span>
       </div>
       
       <div class="form-row">
           <div class="form-group">
               <label>No. HP</label>
-              <input type="tel" id="nomorHp" class="form-input" value="${res.nomorHp || ''}" />
-              <span class="error-message" id="nomorHp-error"></span>
+              <input type="tel" id="nomorHp" class="glass-input" value="${res.nomorHp || ''}" />
+              <span class="err-msg" id="nomorHp-error"></span>
           </div>
           <div class="form-group">
               <label>Jam</label>
-              <input type="time" id="jam" class="form-input" value="${res.jam || ''}" required />
-              <span class="error-message" id="jam-error"></span>
+              <input type="time" id="jam" class="glass-input" value="${res.jam || ''}" required />
+              <span class="err-msg" id="jam-error"></span>
           </div>
       </div>
       
       <div class="form-row">
           <div class="form-group">
               <label>Jml Org</label>
-              <input type="number" id="jumlah" class="form-input" value="${res.jumlah || ''}" min="1" required />
-              <span class="error-message" id="jumlah-error"></span>
+              <input type="number" id="jumlah" class="glass-input" value="${res.jumlah || ''}" min="1" required />
+              <span class="err-msg" id="jumlah-error"></span>
           </div>
           <div class="form-group">
               <label>Tempat</label>
-              <select id="tempat" class="form-input" required onchange="updateCapacityInfo('edit-reservation-form')"></select>
-              <span id="capacity-info" class="info-text"></span>
-              <span class="error-message" id="tempat-error"></span>
+              <select id="tempat" class="glass-input" required onchange="updateCapacityInfo('edit-reservation-form')"></select>
+              <small id="capacity-info" style="color:var(--primary); font-size:0.8rem;"></small>
+              <span class="err-msg" id="tempat-error"></span>
           </div>
       </div>
       
-      <div class="form-section-highlight">
+      <div class="highlight-box" style="background:#fffbeb; border:1px dashed var(--accent); padding:10px; border-radius:10px; margin-bottom:15px;">
           <div class="form-row">
               <div class="form-group">
                 <label>Nominal DP</label>
-                <input type="number" id="dp" class="form-input" value="${res.dp || 0}" min="0" />
+                <input type="number" id="dp" class="glass-input" value="${res.dp || 0}" min="0" />
               </div>
               <div class="form-group">
                 <label>Via</label>
-                <select id="tipeDp" class="form-input">
+                <select id="tipeDp" class="glass-input">
                     <option value="">- Tanpa DP -</option>
                     <option value="Cash">Cash</option>
                     <option value="QRIS">QRIS</option>
@@ -1347,19 +1333,19 @@ function editReservasi(id) {
       </div>
       
       <div class="form-group">
-          <label>Menu <span class="error-message" id="menus-error"></span></label>
+          <label>Menu <span class="err-msg" id="menus-error"></span></label>
           <div id="selected-menus-container"></div>
           <button type="button" class="btn-dashed" onclick="addMenuSelectionRow('edit-reservation-form')">
-            <i class="fas fa-plus"></i> Tambah Menu
+            + Tambah Menu
           </button>
       </div>
       
       <div class="form-group">
           <label>Catatan</label>
-          <textarea id="tambahan" class="form-input" rows="2">${escapeHtml(res.tambahan || '')}</textarea>
+          <textarea id="tambahan" class="glass-input" rows="2">${escapeHtml(res.tambahan || '')}</textarea>
       </div>
       
-      <div class="popup-footer">
+      <div class="popup-foot" style="border-top:1px solid #eee; padding-top:15px; text-align:right;">
         <button type="button" class="btn-primary-gradient" onclick="simpanPerubahanReservasi()">Simpan Perubahan</button>
       </div>
     </form>`;
@@ -1473,7 +1459,7 @@ async function hapusReservasi(id) {
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#64748b',
+      cancelButtonColor: '#94a3b8',
       confirmButtonText: 'Ya, Hapus'
   });
 
@@ -1508,14 +1494,14 @@ async function validateAndGetFormData(formId) {
         
         // Highlight input border
         const inputEl = form.querySelector(`#${elementId}`);
-        if(inputEl) inputEl.classList.add('input-error'); // Class error style (border red)
+        if(inputEl) inputEl.style.borderColor = 'var(--danger)';
         
         isValid = false; 
     };
 
     // Reset error styles
-    form.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-    form.querySelectorAll('.form-input').forEach(el => el.classList.remove('input-error'));
+    form.querySelectorAll('.err-msg').forEach(el => el.textContent = '');
+    form.querySelectorAll('.glass-input').forEach(el => el.style.borderColor = '');
 
     // --- 1. Validasi Nama ---
     const namaInput = form.querySelector('#nama');
@@ -1549,13 +1535,14 @@ async function validateAndGetFormData(formId) {
         setError('tempat', 'Pilih lokasi');
     } else {
         // Cek Kapasitas (Fitur Penting!)
+        // Kita cari lokasi berdasarkan NAMA (value option = name)
         const locationKey = Object.keys(locationsData).find(k => locationsData[k].name === tempat);
         
         if(locationKey) {
             const cap = locationsData[locationKey].capacity;
             if (jumlah > cap) {
                 // Tampilkan error jika over capacity
-                setError('jumlah', `Over capacity! (Max ${cap})`);
+                setError('jumlah', `Max kapasitas: ${cap} org`);
                 showToast(`Lokasi ${tempat} hanya muat ${cap} orang.`, 'error');
             }
         }
@@ -1576,7 +1563,7 @@ async function validateAndGetFormData(formId) {
         // Ambil hanya jika nama menu valid dan qty > 0
         if(mName && !isNaN(mQty) && mQty > 0) {
             if(selectedItems.has(mName)) {
-                setError('menus', 'Menu ganda terdeteksi. Gabungkan qty.');
+                setError('menus', 'Menu ganda. Gabungkan qty.');
             } else {
                 selectedItems.add(mName);
                 menus.push({ name: mName, quantity: mQty });
@@ -1585,12 +1572,7 @@ async function validateAndGetFormData(formId) {
     });
 
     // --- HASIL ---
-    if(!isValid) {
-        // Efek getar pada form jika error (opsional UI polish)
-        form.classList.add('shake-anim');
-        setTimeout(() => form.classList.remove('shake-anim'), 500);
-        return null;
-    }
+    if(!isValid) return null;
 
     // Return Object Bersih
     return {
@@ -1673,14 +1655,13 @@ function updateCapacityInfo(formId) {
         const cap = locationsData[locKey].capacity;
         infoSpan.innerHTML = `<i class="fas fa-info-circle"></i> Max: <b>${cap} orang</b>`;
         infoSpan.style.color = 'var(--primary)';
-        infoSpan.style.fontSize = '0.8rem';
     } else {
         infoSpan.textContent = '';
     }
 }
 // ============================================================================
 // FILE: app.js
-// BAGIAN 5: MASTER DATA, BROADCAST, ANALISIS, & TOOLS (FINAL)
+// BAGIAN 5: MASTER DATA, BROADCAST, TOOLS, SETTINGS & FINAL LOGIC
 // ============================================================================
 
 /**
@@ -1700,10 +1681,10 @@ function showMenuManagement() {
           <div style="background:#f8fafc; padding:15px; border-radius:10px; margin-bottom:20px; border:1px solid #e2e8f0;">
               <h4 style="margin-top:0; color:var(--primary-dark); margin-bottom:10px;">Tambah Menu Baru</h4>
               <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:10px;">
-                 <input type="text" id="newMenuName" class="form-input" placeholder="Nama Menu (Cth: Nasi Goreng)">
-                 <input type="number" id="newMenuPrice" class="form-input" placeholder="Harga (Rp)">
+                 <input type="text" id="newMenuName" class="glass-input" placeholder="Nama Menu (Cth: Nasi Goreng)">
+                 <input type="number" id="newMenuPrice" class="glass-input" placeholder="Harga (Rp)">
               </div>
-              <textarea id="newMenuDetails" class="form-input" placeholder="Detail/Varian (pisahkan koma). Cth: Pedas, Sedang" style="min-height:60px;"></textarea>
+              <textarea id="newMenuDetails" class="glass-input" placeholder="Detail/Varian (pisahkan koma). Cth: Pedas, Sedang" style="min-height:60px;"></textarea>
               <button class="btn-primary-gradient full-width" onclick="addNewMenu()" style="margin-top:10px;">
                  <i class="fas fa-plus-circle"></i> Simpan Menu
               </button>
@@ -1733,13 +1714,13 @@ function renderManageMenuList() {
         const details = detailMenu[name].join(', ');
         
         return `
-        <div class="menu-item">
+        <div class="menu-item" style="padding:10px 15px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1;">
                 <div style="font-weight:600; color:var(--text-main);">${escapeHtml(name)}</div>
                 <div style="font-size:0.85rem; color:var(--success); font-weight:500;">Rp ${formatRupiah(price)}</div>
                 <div style="font-size:0.8rem; color:#888;">${escapeHtml(details)}</div>
             </div>
-            <button class="btn-sm btn-danger-outlined" onclick="deleteMenu('${escapeHtml(name)}')" title="Hapus Menu">
+            <button class="btn-del" onclick="deleteMenu('${escapeHtml(name)}')" title="Hapus Menu">
                 <i class="fas fa-trash"></i>
             </button>
         </div>`;
@@ -1815,8 +1796,8 @@ function showLocationManagement() {
           <div style="background:#f8fafc; padding:15px; border-radius:10px; margin-bottom:20px; border:1px solid #e2e8f0;">
               <h4 style="margin-top:0; color:var(--primary-dark); margin-bottom:10px;">Tambah Tempat Baru</h4>
               <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
-                 <input type="text" id="newLocName" class="form-input" placeholder="Nama Tempat (Cth: Gazebo 1)">
-                 <input type="number" id="newLocCap" class="form-input" placeholder="Kapasitas (Org)">
+                 <input type="text" id="newLocName" class="glass-input" placeholder="Nama Tempat (Cth: Gazebo 1)">
+                 <input type="number" id="newLocCap" class="glass-input" placeholder="Kapasitas (Org)">
               </div>
               <button class="btn-primary-gradient full-width" onclick="addNewLocation()" style="margin-top:10px;">
                  <i class="fas fa-plus-circle"></i> Tambah Tempat
@@ -1841,12 +1822,12 @@ function renderManageLocList() {
     listEl.innerHTML = Object.entries(locationsData)
         .sort(([,a], [,b]) => a.name.localeCompare(b.name))
         .map(([docId, data]) => `
-        <div class="menu-item">
+        <div class="menu-item" style="padding:10px 15px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1;">
                 <div style="font-weight:600; color:var(--text-main);">${escapeHtml(data.name)}</div>
                 <small style="color:#666;">Kapasitas Max: ${data.capacity} orang</small>
             </div>
-            <button class="btn-sm btn-danger-outlined" onclick="deleteLocation('${docId}')" title="Hapus Tempat">
+            <button class="btn-del" onclick="deleteLocation('${docId}')" title="Hapus Tempat">
                 <i class="fas fa-trash"></i>
             </button>
         </div>`
@@ -1955,7 +1936,6 @@ async function showBroadcastList() {
     showLoader();
     try {
         // Ambil 500 reservasi terakhir (Query Berat)
-        // Kita batasi 500 agar tidak overload browser, asumsi pelanggan aktif ada di 500 terakhir
         const snap = await db.collection('reservations').orderBy('createdAt','desc').limit(500).get();
         const map = new Map();
         
@@ -1981,7 +1961,7 @@ async function showBroadcastList() {
                 <button class="close-popup-btn" onclick="closePopup('broadcastListPopup')">&times;</button>
             </div>
             <div class="popup-content">
-                <input type="text" id="broadcastSearch" class="form-input" placeholder="Cari nama atau nomor HP..." oninput="filterBroadcastCustomers(this.value)" style="margin-bottom:15px;">
+                <input type="text" id="broadcastSearch" class="glass-input" placeholder="Cari nama atau nomor HP..." oninput="filterBroadcastCustomers(this.value)" style="margin-bottom:15px;">
                 <div id="broadcast-customer-list" style="max-height:400px; overflow-y:auto; border:1px solid #eee; border-radius:8px;"></div>
                 <div style="margin-top:15px; text-align:right;">
                     <button class="btn-secondary-outlined" onclick="showBroadcastSettings()">Ubah Pesan</button>
@@ -2011,9 +1991,8 @@ function renderBroadcastList(arr) {
         return;
     }
 
-    // Virtual rendering simple (render semua string HTML lalu inject)
     container.innerHTML = arr.map(c => `
-        <div class="menu-item">
+        <div class="menu-item" style="padding:10px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9;">
             <div style="flex:1;">
                 <div style="font-weight:600;">${escapeHtml(c.name)}</div>
                 <small class="text-muted">${c.phone}</small>
@@ -2037,7 +2016,7 @@ function sendPromo(hp, nm, btnEl) {
     let msg = localStorage.getItem(BROADCAST_MESSAGE_KEY);
     if(!msg) return showToast("Template pesan hilang. Atur ulang.", "error");
     
-    // Ganti variable 'kak' dengan nama pelanggan (Case Insensitive Global)
+    // Ganti variable 'kak' dengan nama pelanggan
     msg = msg.replace(/kak/gi, `Kak *${nm}*`); 
     
     window.open(`https://wa.me/${hp}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -2080,7 +2059,7 @@ function showExportDataPopup() {
 function copyExportCode() {
     const el = document.getElementById('export-data-output');
     el.select();
-    document.execCommand('copy'); // Fallback copy
+    document.execCommand('copy'); 
     
     // Modern API copy (jika support)
     if (navigator.clipboard) {
@@ -2185,7 +2164,6 @@ async function runUIAnalysis() {
     if(!chartCanvas) return;
 
     // 2. Fetch All Data (Lazy Load - Heavy)
-    // Hanya fetch jika cache kosong
     if(!allReservationsCache) {
         showLoader();
         try {
@@ -2205,7 +2183,6 @@ async function runUIAnalysis() {
     const monthlyCounts = Array(12).fill(0);
     
     allReservationsCache.forEach(r => {
-        // Parse date string YYYY-MM-DD
         if(r.date) {
             const d = new Date(r.date);
             if(d.getFullYear() === year) {
@@ -2221,17 +2198,17 @@ async function runUIAnalysis() {
     chartInstance = new Chart(ctx, {
         type: 'line', 
         data: {
-            labels: monthNames.map(m => m.substr(0, 3)), // Jan, Feb, Mar...
+            labels: monthNames.map(m => m.substr(0, 3)), 
             datasets: [{
                 label: `Total Reservasi ${year}`,
                 data: monthlyCounts,
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderColor: '#10b981', // Brand Color
+                borderColor: '#10b981', 
                 borderWidth: 2,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: '#059669',
                 fill: true,
-                tension: 0.4 // Garis melengkung halus
+                tension: 0.4
             }]
         },
         options: { 
@@ -2259,15 +2236,15 @@ async function runUIAnalysis() {
     const insightDiv = document.getElementById('quick-insights');
     if(insightDiv) {
         insightDiv.innerHTML = `
-            <div class="stat-card glass-card" style="padding:15px; flex-direction:column; align-items:flex-start;">
+            <div class="stat-card glass-panel" style="padding:15px; flex-direction:column; align-items:flex-start;">
                 <small class="text-muted">Total Tahun ${year}</small>
                 <h3 style="margin:0; color:var(--primary);">${total}</h3>
             </div>
-            <div class="stat-card glass-card" style="padding:15px; flex-direction:column; align-items:flex-start;">
+            <div class="stat-card glass-panel" style="padding:15px; flex-direction:column; align-items:flex-start;">
                 <small class="text-muted">Rata-rata/Bulan</small>
                 <h3 style="margin:0; color:var(--info);">${avg}</h3>
             </div>
-            <div class="stat-card glass-card" style="padding:15px; flex-direction:column; align-items:flex-start;">
+            <div class="stat-card glass-panel" style="padding:15px; flex-direction:column; align-items:flex-start;">
                 <small class="text-muted">Bulan Tertinggi</small>
                 <h3 style="margin:0; color:var(--accent);">${max}</h3>
             </div>
@@ -2284,8 +2261,8 @@ function showAnalysis() {
             <button class="close-popup-btn" onclick="closePopup('analysisPopup')">&times;</button>
         </div>
         <div class="popup-content">
-            <p>Fitur analisis mendalam seperti "Top 5 Menu Terlaris" atau "Top Pelanggan" dapat ditambahkan di sini menggunakan data dari <code>allReservationsCache</code>.</p>
-            <button class="btn-primary-gradient" onclick="runUIAnalysis(); closePopup('analysisPopup');">Refresh Grafik Utama</button>
+            <p>Fitur analisis mendalam (Top Menu, Top Customer) menggunakan data dari cache.</p>
+            <button class="btn-primary-gradient" onclick="runUIAnalysis(); closePopup('analysisPopup');">Refresh Grafik</button>
         </div>
     `;
     popup.style.display = 'block'; 
@@ -2294,7 +2271,51 @@ function showAnalysis() {
 
 
 /**
- * 31. BACKGROUND SERVICE: NOTIFIKASI
+ * 31. PENGATURAN & CUSTOM BACKGROUND (FITUR BARU)
+ * Mengatur tampilan background aplikasi.
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    applySavedBackground(); // Load bg saat start
+});
+
+function saveCustomBackground() {
+    const url = document.getElementById('bgUrlInput').value.trim();
+    if (!url) return showToast("URL gambar kosong!", "error");
+    
+    localStorage.setItem(BG_STORAGE_KEY, url);
+    applySavedBackground();
+    showToast("Background berhasil diganti!", "success");
+}
+
+function resetBackground() {
+    localStorage.removeItem(BG_STORAGE_KEY);
+    applySavedBackground();
+    showToast("Background kembali ke default.");
+}
+
+function setBgFromPreset(el) {
+    let style = el.style.backgroundImage;
+    let url = style.slice(4, -1).replace(/"/g, "");
+    
+    localStorage.setItem(BG_STORAGE_KEY, url);
+    applySavedBackground();
+    showToast("Tema diterapkan!");
+}
+
+function applySavedBackground() {
+    const saved = localStorage.getItem(BG_STORAGE_KEY);
+    const root = document.documentElement;
+    if (saved) {
+        root.style.setProperty('--bg-image', `url('${saved}')`);
+    } else {
+        // Default
+        root.style.setProperty('--bg-image', "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232&auto=format&fit=crop')");
+    }
+}
+
+
+/**
+ * 32. BACKGROUND SERVICE: NOTIFIKASI
  * Mengecek reservasi yang sudah lewat waktunya untuk diingatkan mengirim ucapan terima kasih.
  */
 function setupReliableNotificationChecker() {
@@ -2308,17 +2329,14 @@ function setupReliableNotificationChecker() {
 }
 
 async function runNotificationCheck() {
-    // Hanya jalan jika data reservasi sudah terload di memori
     if(Object.keys(dataReservasi).length === 0) return;
 
     const now = new Date();
     let pendingCount = 0;
     const listHtml = [];
 
-    // Iterasi semua tanggal yang ada di cache (biasanya bulan ini)
     for(const dateKey in dataReservasi) {
         dataReservasi[dateKey].forEach(r => {
-            // Syarat: Ada nomor HP, Belum dikirim ucapan
             if(!r.thankYouSent && r.nomorHp) {
                 const resDateTime = new Date(`${currentYear}-${dateKey}T${r.jam}`);
                 
@@ -2339,13 +2357,16 @@ async function runNotificationCheck() {
         });
     }
 
-    // Update UI Badge & Dropdown
     const badge = document.getElementById('notification-badge');
+    const badgeMobile = document.getElementById('notification-badge-mobile');
     const ul = document.getElementById('notification-list-ul');
     
     if(badge) {
         badge.textContent = pendingCount;
         badge.style.display = pendingCount > 0 ? 'flex' : 'none';
+    }
+    if(badgeMobile) {
+        badgeMobile.style.display = pendingCount > 0 ? 'flex' : 'none';
     }
     
     if(ul) {
@@ -2358,23 +2379,19 @@ function sendThankYouMessage(id, nm, hp) {
     
     window.open(`https://wa.me/${cleanPhoneNumber(hp)}?text=${encodeURIComponent(msg)}`, '_blank');
     
-    // Update DB agar tidak muncul lagi
     db.collection('reservations').doc(id).update({ thankYouSent: true });
     
-    // Update UI lokal
     const btn = document.getElementById(`thank-btn-${id}`);
     if(btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-check"></i> Sent';
-        btn.classList.remove('btn-info');
-        btn.classList.add('btn-secondary-outlined');
+        btn.style.opacity = 0.5;
     }
 }
 
 // Utilities Akhir
 function forceSync() {
     showLoader();
-    setTimeout(() => location.reload(), 800); // Reload halaman
+    setTimeout(() => location.reload(), 800); 
 }
 
 function toggleNotificationDropdown(e) {
@@ -2383,11 +2400,9 @@ function toggleNotificationDropdown(e) {
     d.style.display = d.style.display === 'block' ? 'none' : 'block';
 }
 
-// Global Click Listener untuk menutup dropdown notifikasi
 window.addEventListener('click', () => {
     const d = document.getElementById('notification-dropdown');
     if(d) d.style.display = 'none';
 });
 
-// Penutup Console
-console.log("Dolan Sawah App Loaded: Luxury Version.");
+console.log("Dolan Sawah App Loaded: Luxury Edition.");
