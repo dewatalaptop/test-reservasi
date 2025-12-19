@@ -1,34 +1,40 @@
-/* =========================================
-   1. VARIABLES & RESET (iOS Luxury Theme)
-   ========================================= */
+/* ==========================================================================
+   1. VARIABLES & RESET (ULTIMATE THEME)
+   ========================================================================== */
 :root {
-  /* Brand Colors (Nature & Luxury) */
-  --primary: #059669;         /* Emerald Green */
+  /* Brand Colors */
+  --primary: #059669;         /* Emerald Green (Base) */
+  --primary-dark: #047857;
   --primary-gradient: linear-gradient(135deg, #059669, #34d399);
-  --secondary: #64748b;       /* Slate Grey */
-  --accent: #d97706;          /* Amber */
-  --danger: #ef4444;          /* iOS Red */
-  --success: #10b981;         /* iOS Green */
-  --info: #3b82f6;            /* iOS Blue */
   
+  --secondary: #64748b;       /* Slate Grey */
+  --accent: #d97706;          /* Amber/Gold for Highlights */
+  
+  /* Status Colors */
+  --danger: #ef4444;
+  --success: #10b981;
+  --info: #3b82f6;
+  --warning: #f59e0b;
+
   /* Text Colors */
-  --text-main: #1e293b;       /* Dark Blue-Grey */
-  --text-muted: #64748b;      /* Muted Grey */
+  --text-main: #1e293b;       /* Sangat Gelap untuk Keterbacaan */
+  --text-muted: #64748b;
   --text-light: #ffffff;
 
-  /* Liquid Glass Variables */
-  --glass-bg: rgba(255, 255, 255, 0.75); /* Transparansi Pas */
-  --glass-border: rgba(255, 255, 255, 0.6);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-  --glass-blur: blur(20px) saturate(180%); /* Efek "Kaca Mahal" iOS */
+  /* Glassmorphism Variables (The Core) */
+  /* Background Panel (Blurry) */
+  --glass-bg: rgba(255, 255, 255, 0.85); 
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --glass-blur: blur(20px) saturate(180%);
   
   /* Dimensions */
   --sidebar-w: 280px;
   --header-h: 70px;
-  --radius-xl: 24px;
-  --radius-md: 16px;
+  --radius-xl: 20px;
+  --radius-md: 12px;
   
-  /* Background Image (Default - akan ditimpa JS) */
+  /* Background Image Default (Akan ditimpa JS) */
   --bg-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232&auto=format&fit=crop');
 }
 
@@ -38,51 +44,55 @@ body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin: 0; padding: 0;
   color: var(--text-main);
-  background-color: #f0fdf4;
+  background-color: #f0fdf4; /* Fallback color */
   font-size: 14px;
-  overflow-x: hidden; /* Mencegah scroll horizontal */
+  overflow-x: hidden;
 }
 
-/* Custom Scrollbar */
+/* Scrollbar Modern */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-/* =========================================
-   2. BACKGROUND SYSTEM
-   ========================================= */
+/* ==========================================================================
+   2. BACKGROUND SYSTEM (SHARP BACKGROUND REQUEST)
+   ========================================================================== */
 .bg-nature {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background-image: var(--bg-image);
-  background-position: center; background-size: cover; background-repeat: no-repeat;
+  background-position: center; 
+  background-size: cover; 
+  background-repeat: no-repeat;
   z-index: -2;
+  /* PENTING: Tidak ada filter blur di sini agar gambar tajam */
   transition: background-image 0.5s ease-in-out;
 }
 
 .bg-overlay-glass {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(255, 255, 255, 0.35); /* Tint putih agar teks terbaca */
-  backdrop-filter: blur(5px); /* Blur background asli sedikit */
+  background: rgba(0, 0, 0, 0.15); /* Overlay tipis gelap untuk kontras teks */
   z-index: -1;
+  /* Tidak ada backdrop-filter di sini agar background tetap tajam */
 }
 
-/* =========================================
-   3. GLASS COMPONENTS (The Core Style)
-   ========================================= */
-.glass-panel, .glass-sidebar, .glass-header, .glass-card, .popup-glass, .glass-dropdown {
+/* ==========================================================================
+   3. GLASS COMPONENTS (PANEL ONLY BLUR)
+   ========================================================================== */
+/* Hanya elemen ini yang blur, background belakang tetap tajam */
+.glass-panel, .glass-sidebar, .glass-header, .glass-card, .popup-glass, .glass-dropdown, .mobile-header {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur); /* Safari support */
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   border-radius: var(--radius-xl);
 }
 
-.glass-input, .form-input {
+.glass-input {
   width: 100%; padding: 12px 15px; border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.1); 
-  background: rgba(255,255,255, 0.6);
+  background: rgba(255,255,255, 0.5); /* Semi transparan */
   font-family: inherit; font-size: 0.95rem; transition: 0.3s;
   color: var(--text-main);
 }
@@ -91,107 +101,54 @@ body {
   box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
 }
 
-/* =========================================
-   4. LOGIN SCREEN
-   ========================================= */
-.login-wrapper {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  display: flex; justify-content: center; align-items: center;
-  z-index: 9999; background: rgba(0,0,0,0.2);
-}
-.login-wrapper.glass-blur { backdrop-filter: blur(15px); }
-
-.login-card {
-  width: 90%; max-width: 400px; padding: 40px; text-align: center;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.brand-logo { font-size: 3rem; color: var(--primary); margin-bottom: 10px; }
-.login-card h2 { margin: 0; color: var(--primary); font-size: 1.8rem; }
-.login-card p { color: var(--text-muted); margin-bottom: 30px; }
-
-.input-group { position: relative; margin-bottom: 15px; }
-.input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 2; }
-.input-group input { padding-left: 45px; }
-
-.error-text { color: var(--danger); font-size: 0.9rem; margin-top: 15px; display: none; font-weight: 600; }
-
-/* =========================================
-   5. SIDEBAR NAVIGATION
-   ========================================= */
+/* ==========================================================================
+   4. LAYOUT & SIDEBAR
+   ========================================================================== */
+/* Sidebar Desktop */
 .sidebar {
   width: var(--sidebar-w); height: 100vh; 
   position: fixed; left: 0; top: 0; z-index: 1000;
   display: flex; flex-direction: column;
-  border-radius: 0 24px 24px 0;
-  transform: translateX(0); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 24px 24px 0; /* Lengkungan hanya di kanan */
+  border-left: none; border-top: none; border-bottom: none;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-brand {
-  height: 80px; display: flex; align-items: center; padding: 0 25px;
+  height: 80px; display: flex; align-items: center; justify-content: space-between; padding: 0 25px;
   font-size: 1.4rem; font-weight: 800; color: var(--primary);
-  gap: 10px; letter-spacing: -0.5px;
+  letter-spacing: -0.5px;
 }
 .sidebar-brand i { color: var(--accent); font-size: 1.6rem; }
 
-.nav-menu { flex: 1; padding: 20px 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.nav-menu { flex: 1; padding: 20px 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 
 .nav-item {
   display: flex; align-items: center; gap: 15px; padding: 14px 20px;
-  border-radius: 16px; cursor: pointer; color: var(--text-main);
+  border-radius: 14px; cursor: pointer; color: var(--text-main);
   font-weight: 600; transition: all 0.2s; position: relative;
 }
-.nav-item:hover { background: rgba(255,255,255,0.6); color: var(--primary); }
+.nav-item:hover { background: rgba(255,255,255,0.5); color: var(--primary); }
 .nav-item.active {
   background: var(--primary-gradient);
   color: white; box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
 }
-.nav-item i { width: 24px; text-align: center; font-size: 1.1rem; }
-
 .nav-item .badge {
   margin-left: auto; background: var(--danger); color: white;
   padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
 }
 
 .sidebar-footer { padding: 20px; border-top: 1px solid rgba(0,0,0,0.05); }
-.btn-logout {
-  width: 100%; padding: 12px; border-radius: 12px; border: none;
-  background: rgba(239, 68, 68, 0.1); color: var(--danger);
-  font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
-  transition: 0.2s;
-}
-.btn-logout:hover { background: var(--danger); color: white; }
 
-/* =========================================
-   6. MAIN CONTENT & HEADER
-   ========================================= */
+/* Main Content Wrapper */
 .main-content {
   margin-left: var(--sidebar-w); padding: 30px;
   min-height: 100vh; transition: margin-left 0.3s;
 }
 
-/* Mobile Header (Hidden on Desktop) */
-.mobile-header {
-  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 70px;
-  z-index: 999; padding: 0 20px; align-items: center; justify-content: space-between;
-  background: rgba(255,255,255,0.9); backdrop-filter: blur(15px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-}
-
-/* FIX: Tombol Mobile Toggle Lebih Besar */
-#mobile-toggle {
-  background: rgba(255,255,255,0.8); 
-  border: 1px solid rgba(0,0,0,0.1);
-  width: 48px; height: 48px; /* Ukuran sentuh ideal */
-  border-radius: 12px;
-  font-size: 1.3rem; color: var(--text-main);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-#mobile-toggle:active { background: #eee; transform: scale(0.95); }
-
-.header-brand { font-weight: 800; font-size: 1.3rem; color: var(--primary); }
-
+/* ==========================================================================
+   5. HEADER & NAVIGATION
+   ========================================================================== */
 /* Desktop Header */
 .top-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -199,6 +156,15 @@ body {
 }
 .header-left h2 { margin: 0; font-size: 1.8rem; color: var(--text-main); }
 .header-left small { color: var(--text-muted); font-size: 0.95rem; font-weight: 500; }
+
+/* Mobile Header (Hidden on Desktop) */
+.mobile-header {
+  display: none; /* Default hidden */
+  position: fixed; top: 0; left: 0; width: 100%; height: 65px;
+  z-index: 990; padding: 0 15px; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  border-radius: 0 0 20px 20px; /* Rounded bottom corners */
+}
 
 /* Notification Bell */
 .icon-btn, .notif-icon {
@@ -211,28 +177,31 @@ body {
 .icon-btn:hover { transform: translateY(-2px); color: var(--primary); }
 
 .badge-count, .badge-dot {
-  position: absolute; top: 0; right: 0;
+  position: absolute; top: -2px; right: -2px;
   background: var(--danger); color: white;
   width: 20px; height: 20px; border-radius: 50%;
   font-size: 0.75rem; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   border: 2px solid white;
 }
-.badge-dot { width: 10px; height: 10px; top: 5px; right: 5px; }
+.badge-dot { width: 12px; height: 12px; top: 10px; right: 10px; border: 2px solid #fff; }
 
-/* Dropdowns (Notification & Sort) */
+/* Dropdown */
 .glass-dropdown {
-  position: absolute; top: 60px; right: 0; width: 280px;
-  display: none; z-index: 100; overflow: hidden; background: white;
-  animation: fadeIn 0.2s ease;
+  position: absolute; top: 60px; right: 0; width: 300px;
+  display: none; z-index: 1100; overflow: hidden; background: white;
+  animation: slideDown 0.2s ease;
 }
-.dropdown-head { padding: 15px; border-bottom: 1px solid #eee; font-weight: 700; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; }
-.notification-item { padding: 12px 15px; border-bottom: 1px solid #f1f1f1; font-size: 0.9rem; cursor: pointer; transition: 0.2s; }
-.notification-item:hover { background: #f0fdf4; color: var(--primary); }
+@keyframes slideDown { from {opacity: 0; transform: translateY(-10px);} to {opacity: 1; transform: translateY(0);} }
 
-/* =========================================
-   7. DASHBOARD WIDGETS
-   ========================================= */
+.dropdown-head { padding: 15px; border-bottom: 1px solid #eee; font-weight: 700; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; }
+.notification-item { list-style: none; padding: 12px 15px; border-bottom: 1px solid #f1f1f1; font-size: 0.9rem; cursor: pointer; }
+.notification-item:hover { background: #f0fdf4; color: var(--primary); }
+ul#notification-list-ul { margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
+
+/* ==========================================================================
+   6. DASHBOARD CARDS & STATS
+   ========================================================================== */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
 
 .stat-card {
@@ -240,10 +209,7 @@ body {
   position: relative; overflow: hidden; transition: transform 0.2s;
 }
 .stat-card:hover { transform: translateY(-5px); border-color: #fff; }
-.stat-card.clickable { cursor: pointer; }
-
-/* Efek Kilap */
-.stat-card::before {
+.stat-card::before { /* Shine Effect */
   content: ''; position: absolute; top: 0; left: -50%; width: 50%; height: 100%;
   background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
   transform: skewX(-20deg); transition: 0.5s; pointer-events: none;
@@ -263,12 +229,11 @@ body {
 .stat-info .value { font-size: 1.8rem; font-weight: 800; color: var(--text-main); display: block; margin-top: 5px; }
 
 .dashboard-split { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-.card-box { padding: 0; display: flex; flex-direction: column; height: 100%; }
+.card-box { padding: 0; display: flex; flex-direction: column; height: 100%; max-height: 500px; }
 .card-header { padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.05); }
 .card-header h3 { margin: 0; font-size: 1.1rem; color: var(--text-main); font-weight: 700; }
 
-.list-container { padding: 10px; overflow-y: auto; max-height: 400px; }
-.loading-text { padding: 20px; color: var(--text-muted); }
+.list-container { padding: 10px; overflow-y: auto; flex: 1; }
 
 .quick-actions-grid { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 .btn-action {
@@ -280,9 +245,9 @@ body {
 .btn-action:hover { background: white; color: var(--primary); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 .btn-action i { font-size: 1.5rem; color: var(--primary); }
 
-/* =========================================
-   8. CALENDAR (THE CRITICAL PART)
-   ========================================= */
+/* ==========================================================================
+   7. CALENDAR SYSTEM
+   ========================================================================== */
 .calendar-wrapper { padding: 25px; }
 
 .calendar-header-custom {
@@ -301,28 +266,21 @@ body {
   border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 0.85rem;
 }
 
-/* GRID SYSTEM 7 KOLOM */
 .calendar-weekdays {
-  display: grid; 
-  grid-template-columns: repeat(7, 1fr); 
+  display: grid; grid-template-columns: repeat(7, 1fr); 
   text-align: center; margin-bottom: 10px; 
 }
 .calendar-weekdays div { font-weight: 700; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; }
 
-.calendar-days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-}
+.calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
 
 .calendar-day {
-  background: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.6);
   border: 1px solid rgba(0,0,0,0.05);
   border-radius: 14px;
-  min-height: 90px; /* Desktop height */
+  min-height: 90px;
   padding: 8px;
-  cursor: pointer;
-  position: relative;
+  cursor: pointer; position: relative;
   transition: all 0.2s ease;
   display: flex; flex-direction: column; align-items: center;
 }
@@ -343,19 +301,11 @@ body {
 /* Detail View */
 .detail-card { padding: 25px; margin-bottom: 50px; border-top: 5px solid var(--primary); margin-top: 20px; }
 .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-.detail-header h3 { margin: 0; color: var(--primary); }
-
-.detail-actions { display: flex; gap: 8px; }
-
-.search-wrapper { position: relative; margin-bottom: 20px; }
-.search-wrapper i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #999; }
-.search-wrapper input { padding-left: 45px; border-radius: 30px; background: white; }
-
 .detail-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
 
-/* =========================================
-   9. BUTTONS & UTILS
-   ========================================= */
+/* ==========================================================================
+   8. COMPONENTS & BUTTONS
+   ========================================================================== */
 button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; }
 
 .btn-primary, .btn-primary-gradient {
@@ -380,54 +330,39 @@ button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; 
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.err-msg { color: var(--danger); font-size: 0.8rem; margin-left: 5px; }
 
-/* Menu Input Row */
+/* Menu Selection */
 .menu-selection-row { display: flex; gap: 10px; margin-bottom: 10px; }
-.menu-selection-row select { flex: 2; }
-.menu-selection-row input { flex: 1; text-align: center; }
 .btn-del { width: 40px; background: #fee2e2; color: var(--danger); border-radius: 10px; border:none; cursor: pointer; }
 
-/* Settings Grid */
-.theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-.theme-option {
-  height: 100px; border-radius: 12px; background-size: cover; background-position: center;
-  cursor: pointer; border: 3px solid transparent; display: flex; align-items: flex-end; padding: 5px;
+/* ==========================================================================
+   9. LOGIN SCREEN
+   ========================================================================== */
+.login-wrapper {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; justify-content: center; align-items: center;
+  z-index: 9999; background: rgba(0,0,0,0.3);
 }
-.theme-option:hover { border-color: var(--primary); transform: scale(0.98); }
-.theme-option span { background: rgba(0,0,0,0.6); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; backdrop-filter: blur(4px); }
+.login-card { width: 90%; max-width: 400px; padding: 40px; text-align: center; }
+.brand-logo { font-size: 3rem; color: var(--primary); margin-bottom: 10px; }
+.input-group { position: relative; margin-bottom: 15px; }
+.input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 2; }
+.input-group input { padding-left: 45px; }
+.error-text { color: var(--danger); font-size: 0.9rem; margin-top: 15px; display: none; font-weight: 600; }
 
-.input-group-row { display: flex; gap: 10px; margin-top: 10px; }
-
-/* =========================================
-   10. MOBILE RESPONSIVE
-   ========================================= */
-@media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); width: 100%; border-radius: 0; background: rgba(255,255,255,0.98); }
-  .sidebar.open { transform: translateX(0); }
-  
-  .main-content { margin-left: 0; padding: 90px 15px 100px 15px; } /* Space for mobile header */
-  .mobile-header { display: flex; }
-  .top-header { display: none; }
-  
-  /* Kalender di HP */
-  .calendar-day { min-height: 65px; padding: 4px; }
-  .day-number { font-size: 0.9rem; }
-  .reservation-count { font-size: 0.6rem; padding: 1px 4px; }
-  
-  .dashboard-split, .stats-grid, .form-row { grid-template-columns: 1fr; }
-}
-
-/* =========================================
-   11. OVERLAYS & POPUPS
-   ========================================= */
+/* ==========================================================================
+   10. POPUPS & OVERLAYS
+   ========================================================================== */
 .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001; display: none; backdrop-filter: blur(5px); }
-
 .popup-glass {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
   width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto;
   z-index: 1002; display: none; padding: 0; background: white;
+  animation: zoomIn 0.2s ease;
 }
 .popup-glass.large { max-width: 750px; }
+@keyframes zoomIn { from {opacity:0; transform: translate(-50%, -50%) scale(0.95);} to {opacity:1; transform: translate(-50%, -50%) scale(1);} }
 
 .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 3000; display: none; justify-content: center; align-items: center; }
 .spinner { width: 45px; height: 45px; border: 4px solid #eee; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
@@ -437,7 +372,112 @@ button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; 
 .toast.success { background: var(--success); }
 .toast.error { background: var(--danger); }
 
-/* Animation Utility */
-.content-section { display: none; animation: fadeIn 0.4s ease; }
-.content-section.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+/* ==========================================================================
+   11. ADVANCED MOBILE RESPONSIVE (SMART UX)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Layout Adjustment */
+  .main-content { margin-left: 0; padding: 80px 15px 100px 15px; /* Extra padding bottom for scrolling */ } 
+  .mobile-header { display: flex; }
+  .top-header { display: none; }
+
+  /* Smart Sidebar (Drawer Style) */
+  .sidebar {
+    width: 280px; transform: translateX(-100%); 
+    box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+    z-index: 1000;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .close-sidebar-mobile { display: block !important; }
+
+  /* Typography Scaling */
+  h2 { font-size: 1.4rem; }
+  h3 { font-size: 1.1rem; }
+  .stat-card { padding: 15px; }
+  .stat-info .value { font-size: 1.4rem; }
+
+  /* Grid Collapse */
+  .dashboard-split { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; } /* 2 kolom di mobile agar hemat tempat */
+  .form-row { grid-template-columns: 1fr; }
+
+  /* Calendar Optimization */
+  .calendar-day { min-height: 70px; padding: 2px; }
+  .day-number { font-size: 0.9rem; }
+  .reservation-count { font-size: 0.65rem; padding: 1px 4px; border-radius: 6px; }
+  .calendar-weekdays div { font-size: 0.7rem; }
+  
+  /* Inputs & Buttons (Touch Friendly) */
+  .glass-input, button, .nav-item { min-height: 44px; /* Standard iOS touch size */ }
+  
+  /* Detail View */
+  .detail-list { grid-template-columns: 1fr; }
+  .detail-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+  .detail-actions { width: 100%; display: flex; justify-content: space-between; }
+  .search-wrapper { width: 100%; }
+}
+
+@media (max-width: 400px) {
+    /* Small Phone adjustments */
+    .stats-grid { grid-template-columns: 1fr; }
+    .calendar-day { min-height: 60px; }
+}
+
+/* ==========================================================================
+   12. PRINT STYLES (ADVANCED REPORTING)
+   ========================================================================== */
+@media print {
+  /* Hide non-printable elements */
+  .sidebar, .mobile-header, .top-header, .bg-nature, .bg-overlay-glass, 
+  .btn-action, .btn-primary, .btn-icon, .form-group, .section-tools, 
+  .popup-glass, .overlay, .toast, .detail-actions, .search-wrapper,
+  .cal-nav-group button, .btn-today {
+      display: none !important;
+  }
+
+  /* Reset Layout for Print */
+  body { background: white; margin: 0; padding: 0; color: black; font-size: 12pt; overflow: visible; }
+  .main-content { margin: 0; padding: 0; width: 100%; min-height: auto; }
+  .glass-panel, .glass-card, .reservation-item {
+      background: white !important;
+      box-shadow: none !important;
+      border: 1px solid #ccc !important;
+      backdrop-filter: none !important;
+      border-radius: 4px !important;
+  }
+
+  /* Container Reset */
+  #app-layout { display: block !important; }
+  .content-section { display: none; }
+  .content-section.active { display: block; }
+
+  /* Print Specific: Header Laporan */
+  .detail-header::before {
+      content: "Laporan Reservasi - Dolan Sawah";
+      display: block; font-size: 18pt; font-weight: bold; margin-bottom: 10px; text-align: center; width: 100%;
+      border-bottom: 2px solid black; padding-bottom: 10px;
+  }
+  
+  /* Tampilan Grid Kartu saat Print */
+  .detail-list {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important; /* 2 Kolom di kertas */
+      gap: 15px !important;
+  }
+  
+  .reservation-item {
+      break-inside: avoid; /* Jangan potong kartu di tengah halaman */
+      page-break-inside: avoid;
+      padding: 15px !important;
+      border: 1px solid #000 !important;
+      margin-bottom: 15px !important;
+  }
+  
+  /* Print Optimization Texts */
+  .reservation-item h4 { font-size: 14pt; color: black !important; }
+  .reservation-item i { display: none; } /* Hilangkan ikon agar bersih */
+  .menu-detail { border: 1px solid #ddd; background: #fff !important; }
+  
+  /* Force Black Text */
+  * { color: black !important; text-shadow: none !important; }
+}
