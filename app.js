@@ -1640,7 +1640,7 @@ async function deleteLocation(docId) {
 }
 // ============================================================================
 // FILE: app.js
-// BAGIAN 4: BROADCAST, TOOLS, PRINT SYSTEM (FIXED), ANALISIS & UTILITIES
+// BAGIAN 4: BROADCAST, TOOLS, PRINT SYSTEM, ANALISIS, WA LOGIC & UTILITIES
 // ============================================================================
 
 /**
@@ -1648,21 +1648,28 @@ async function deleteLocation(docId) {
  */
 function showBroadcastMain() { 
     const savedMsg = localStorage.getItem(BROADCAST_MESSAGE_KEY);
-    if (!savedMsg) showBroadcastSettings(); else showBroadcastList();
+    if (!savedMsg) {
+        showBroadcastSettings(); 
+    } else {
+        showBroadcastList();
+    }
 }
 
 function showBroadcastSettings() {
     closePopup('broadcastListPopup');
     const popup = document.getElementById('broadcastSettingsPopup');
     document.getElementById('broadcastMessage').value = localStorage.getItem(BROADCAST_MESSAGE_KEY) || '';
-    popup.style.display = 'block'; overlay.style.display = 'block';
+    popup.style.display = 'block'; 
+    overlay.style.display = 'block';
 }
 
 function saveBroadcastMessage() {
     const msg = document.getElementById('broadcastMessage').value;
     if(!msg.trim()) return showToast("Pesan kosong", "error");
+    
     localStorage.setItem(BROADCAST_MESSAGE_KEY, msg);
     promoMessageCache = msg;
+    
     showToast("Template tersimpan", "success");
     closePopup('broadcastSettingsPopup');
     showBroadcastList();
@@ -1674,6 +1681,7 @@ async function showBroadcastList() {
 
     showLoader();
     try {
+        // Ambil 500 reservasi terakhir untuk mendapatkan kontak
         const snap = await db.collection('reservations').orderBy('createdAt','desc').limit(500).get();
         const map = new Map();
         
@@ -1681,7 +1689,9 @@ async function showBroadcastList() {
             const data = d.data();
             if(data.nomorHp && isValidPhone(data.nomorHp)) {
                 const clean = cleanPhoneNumber(data.nomorHp);
-                if(!map.has(clean)) map.set(clean, { phone: clean, name: data.nama });
+                if(!map.has(clean)) {
+                    map.set(clean, { phone: clean, name: data.nama });
+                }
             }
         });
         
@@ -1702,14 +1712,23 @@ async function showBroadcastList() {
             </div>`;
         
         renderBroadcastList(allCustomersCache);
-        popup.style.display = 'block'; overlay.style.display = 'block';
-    } catch(e) { console.error(e); } finally { hideLoader(); }
+        popup.style.display = 'block'; 
+        overlay.style.display = 'block';
+    } catch(e) { 
+        console.error(e); 
+    } finally { 
+        hideLoader(); 
+    }
 }
 
 function renderBroadcastList(arr) {
     const container = document.getElementById('broadcast-customer-list');
     if(!container) return;
-    if(arr.length === 0) { container.innerHTML = '<p style="padding:20px; text-align:center;">Kosong.</p>'; return; }
+    
+    if(arr.length === 0) { 
+        container.innerHTML = '<p style="padding:20px; text-align:center;">Kosong.</p>'; 
+        return; 
+    }
 
     container.innerHTML = arr.map(c => `
         <div class="menu-item" style="padding:10px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9;">
@@ -1731,8 +1750,13 @@ function filterBroadcastCustomers(q) {
 function sendPromo(hp, nm, btnEl) {
     let msg = localStorage.getItem(BROADCAST_MESSAGE_KEY);
     msg = msg.replace(/kak/gi, `Kak *${nm}*`); 
+    
     window.open(`https://wa.me/${hp}?text=${encodeURIComponent(msg)}`, '_blank');
-    if(btnEl) { btnEl.disabled = true; btnEl.style.opacity = 0.5; }
+    
+    if(btnEl) { 
+        btnEl.disabled = true; 
+        btnEl.style.opacity = 0.5; 
+    }
 }
 
 
@@ -1741,26 +1765,34 @@ function sendPromo(hp, nm, btnEl) {
  */
 function showExportDataPopup() {
     if(Object.keys(dataReservasi).length === 0) return showToast("Data kosong", "error");
-    const payload = { ver: "6.0", date: new Date().toISOString(), data: dataReservasi, master: locationsData };
+    
+    const payload = { 
+        ver: "6.0", 
+        date: new Date().toISOString(), 
+        data: dataReservasi, 
+        master: locationsData 
+    };
+    
     const str = JSON.stringify(payload, null, 2);
     document.getElementById('export-data-output').value = str;
-    document.getElementById('exportDataPopup').style.display = 'block'; overlay.style.display = 'block';
+    document.getElementById('exportDataPopup').style.display = 'block'; 
+    overlay.style.display = 'block';
 }
 
 function copyExportCode() {
     const el = document.getElementById('export-data-output');
-    el.select(); document.execCommand('copy');
+    el.select(); 
+    document.execCommand('copy');
     showToast("Tersalin ke clipboard!");
 }
 
 
 /**
- * 26. PRINT SYSTEM ADVANCED (FIXED & ROBUST)
- * Mengatasi error saat mencetak visual kartu.
+ * 26. PRINT SYSTEM ADVANCED (FIXED + DETAIL MENU + EQUAL HEIGHT)
  */
 function printData() {
     if(!tanggalDipilih) return showToast("Pilih tanggal dulu di Kalender!", "error");
-    // Buka popup opsi print
+    
     document.getElementById('printOptionsPopup').style.display = 'block'; 
     overlay.style.display = 'block';
 }
@@ -1770,7 +1802,6 @@ function executePrint() {
     if(list.length === 0) return showToast("Data kosong pada tanggal ini", "error");
 
     try {
-        // 1. Ambil Opsi dari Popup
         const formatEl = document.querySelector('input[name="printFormat"]:checked');
         const format = formatEl ? formatEl.value : 'cards';
         
@@ -1780,14 +1811,12 @@ function executePrint() {
         const showDp = document.getElementById('print-dp').checked;
         const showNote = document.getElementById('print-tambahan').checked;
 
-        // 2. Sorting Data (Safe Sort)
         const sortedList = [...list].sort((a,b) => {
             const valA = (a[sortBy] || '').toString().toLowerCase();
             const valB = (b[sortBy] || '').toString().toLowerCase();
             return valA.localeCompare(valB);
         });
 
-        // 3. Generate HTML Content
         let contentHtml = '';
         
         if (format === 'table') {
@@ -1796,7 +1825,14 @@ function executePrint() {
                 let menuStr = '-';
                 if(showMenu) {
                     if(r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
-                        menuStr = r.menus.map(m => `${m.quantity}x ${escapeHtml(m.name)}`).join('<br>');
+                        menuStr = r.menus.map(m => {
+                            // Detail menu untuk tabel (inline)
+                            let details = '';
+                            if(detailMenu[m.name] && detailMenu[m.name].length > 0) {
+                                details = `<br><span style="color:#666; font-size:0.8em;">(${detailMenu[m.name].join(', ')})</span>`;
+                            }
+                            return `${m.quantity}x ${escapeHtml(m.name)}${details}`;
+                        }).join('<br>');
                     } else if(r.menu) {
                         menuStr = escapeHtml(r.menu);
                     }
@@ -1832,14 +1868,22 @@ function executePrint() {
             </table>`;
             
         } else {
-            // --- MODE KARTU (VISUAL) ---
+            // --- MODE KARTU (VISUAL - EQUAL HEIGHT & DETAIL MENU) ---
             contentHtml = `<div class="print-grid">`;
             
             sortedList.forEach((r, i) => {
                 let menuHtml = '';
                 if (showMenu) {
                     if(r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
-                        const items = r.menus.map(m => `<div><b>${m.quantity}x</b> ${escapeHtml(m.name)}</div>`).join('');
+                        const items = r.menus.map(m => {
+                            // --- LOGIKA: TAMPILKAN ISI PAKET ---
+                            let detailHtml = '';
+                            if(detailMenu[m.name] && detailMenu[m.name].length > 0) {
+                                detailHtml = `<div style="font-size:10px; color:#555; margin-left:15px; margin-top:2px;">- ${detailMenu[m.name].join(', ')}</div>`;
+                            }
+                            // ----------------------------------------
+                            return `<div style="margin-bottom:4px;"><b>${m.quantity}x</b> ${escapeHtml(m.name)}${detailHtml}</div>`;
+                        }).join('');
                         menuHtml = `<div class="print-menu-box">${items}</div>`;
                     } else if(r.menu) {
                         menuHtml = `<div class="print-menu-box">${escapeHtml(r.menu)}</div>`;
@@ -1855,17 +1899,21 @@ function executePrint() {
 
                 contentHtml += `
                 <div class="print-card">
-                    <div class="pc-head">
-                        <span class="pc-num">#${i+1}</span>
-                        <span class="pc-time">${escapeHtml(r.jam)}</span>
+                    <div>
+                        <div class="pc-head">
+                            <span class="pc-num">#${i+1}</span>
+                            <span class="pc-time">${escapeHtml(r.jam)}</span>
+                        </div>
+                        <div class="pc-body">
+                            <div class="pc-name">${escapeHtml(r.nama)}</div>
+                            ${showKontak && r.nomorHp ? `<div class="pc-meta">📞 ${escapeHtml(r.nomorHp)}</div>` : ''}
+                            ${metaRow}
+                            ${menuHtml}
+                        </div>
                     </div>
-                    <div class="pc-body">
-                        <div class="pc-name">${escapeHtml(r.nama)}</div>
-                        ${showKontak && r.nomorHp ? `<div class="pc-meta">📞 ${escapeHtml(r.nomorHp)}</div>` : ''}
-                        ${metaRow}
-                        ${menuHtml}
-                        ${showDp ? `<div class="pc-dp">${dpLabel}</div>` : ''}
-                        ${showNote && r.tambahan ? `<div class="pc-note">Note: ${escapeHtml(r.tambahan)}</div>` : ''}
+                    <div>
+                         ${showDp ? `<div class="pc-dp">${dpLabel}</div>` : ''}
+                         ${showNote && r.tambahan ? `<div class="pc-note">Note: ${escapeHtml(r.tambahan)}</div>` : ''}
                     </div>
                 </div>`;
             });
@@ -1873,7 +1921,6 @@ function executePrint() {
             contentHtml += `</div>`;
         }
 
-        // 4. Proses Window Print (Versi Lebih Aman dengan Delay)
         const win = window.open('', '_blank');
         if (!win) return showToast("Pop-up diblokir browser. Izinkan pop-up.", "error");
         
@@ -1886,19 +1933,30 @@ function executePrint() {
                     body { font-family: 'Segoe UI', Helvetica, sans-serif; padding: 20px; color: #000; -webkit-print-color-adjust: exact; }
                     h2 { text-align: center; margin-bottom: 5px; text-transform: uppercase; font-size: 18px; }
                     p.sub { text-align: center; color: #555; margin-top: 0; margin-bottom: 30px; font-size: 13px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+                    
+                    /* TABLE STYLES */
                     .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
                     .print-table th, .print-table td { border: 1px solid #444; padding: 6px 8px; vertical-align: top; }
                     .print-table th { background: #eee; font-weight: bold; }
-                    .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-                    .print-card { border: 1px solid #000; padding: 12px; break-inside: avoid; border-radius: 6px; position: relative; }
+                    
+                    /* CARD STYLES (EQUAL HEIGHT MAGIC) */
+                    .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: stretch; }
+                    .print-card { 
+                        border: 1px solid #000; padding: 12px; break-inside: avoid; border-radius: 6px; 
+                        display: flex; flex-direction: column; justify-content: space-between; /* Header atas, Footer bawah */
+                        height: 100%; box-sizing: border-box;
+                    }
+                    
                     .pc-head { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
                     .pc-num { background: #000; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
                     .pc-name { font-size: 16px; font-weight: 800; margin-bottom: 4px; text-transform: capitalize; }
                     .pc-meta { font-size: 11px; color: #333; margin-bottom: 4px; }
                     .pc-meta-row { display: flex; gap: 12px; font-weight: 600; font-size: 12px; margin-bottom: 6px; }
                     .print-menu-box { background: #f2f2f2; padding: 6px; border: 1px dashed #999; font-size: 11px; margin: 6px 0; line-height: 1.4; }
-                    .pc-dp { font-weight: bold; font-size: 11px; margin-top: 5px; text-align: right; }
+                    
+                    .pc-dp { font-weight: bold; font-size: 11px; margin-top: 10px; text-align: right; border-top: 1px solid #eee; padding-top: 5px; }
                     .pc-note { font-style: italic; font-size: 10px; margin-top: 5px; background: #fffec8; padding: 3px; }
+                    
                     @media print {
                         @page { margin: 1cm; size: auto; }
                         body { margin: 0; }
@@ -1916,7 +1974,6 @@ function executePrint() {
         
         win.document.close();
         
-        // Timeout penting untuk memastikan konten ter-render sebelum dialog print muncul
         setTimeout(() => {
             win.focus();
             win.print();
@@ -1926,7 +1983,7 @@ function executePrint() {
 
     } catch (err) {
         console.error("Print Error:", err);
-        showToast("Terjadi kesalahan saat memproses data untuk dicetak.", "error");
+        showToast("Kesalahan data saat cetak.", "error");
     }
 }
 
@@ -1982,7 +2039,7 @@ async function runUIAnalysis() {
         return matchYear && matchMonth;
     });
 
-    // Data Processing for Charts
+    // Chart Data Processing
     let labels = [], dataPoints = [];
     if (selectedMonth === 'all') {
         labels = monthNames.map(m => m.substr(0,3));
@@ -2017,12 +2074,7 @@ async function runUIAnalysis() {
         customerStats[name] = (customerStats[name] || 0) + 1;
     });
 
-    const sortedHours = Object.keys(hoursCounts).sort();
-    const hoursData = sortedHours.map(h => hoursCounts[h]);
-    const topMenus = Object.entries(menuCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
-    const topCustomers = Object.entries(customerStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
-
-    // Chart 1
+    // Render Charts
     const ctx = chartCanvas.getContext('2d');
     if(chartInstance) chartInstance.destroy();
     chartInstance = new Chart(ctx, {
@@ -2039,29 +2091,30 @@ async function runUIAnalysis() {
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
     });
 
-    // Chart 2 & 3
     const ctxHours = document.getElementById('hoursChart').getContext('2d');
     if(chartHours) chartHours.destroy();
     chartHours = new Chart(ctxHours, {
         type: 'bar',
-        data: { labels: sortedHours.map(h => `${h}:00`), datasets: [{ label: 'Jml Transaksi', data: hoursData, backgroundColor: '#3b82f6', borderRadius: 4 }] },
+        data: { labels: Object.keys(hoursCounts).sort().map(h=>`${h}:00`), datasets: [{ label: 'Jml Transaksi', data: Object.keys(hoursCounts).sort().map(h=>hoursCounts[h]), backgroundColor: '#3b82f6', borderRadius: 4 }] },
         options: { responsive: true, maintainAspectRatio: false }
     });
 
     const ctxMenu = document.getElementById('menuChart').getContext('2d');
     if(chartMenu) chartMenu.destroy();
+    const topMenus = Object.entries(menuCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
     chartMenu = new Chart(ctxMenu, {
         type: 'doughnut',
-        data: { labels: topMenus.map(i => i[0]), datasets: [{ data: topMenus.map(i => i[1]), backgroundColor: ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6'] }] },
+        data: { labels: topMenus.map(i=>i[0]), datasets: [{ data: topMenus.map(i=>i[1]), backgroundColor: ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6'] }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
     });
 
-    // Table & Stats
+    // Render Table
     const tableBody = document.getElementById('top-customer-table');
     if(tableBody) {
-        tableBody.innerHTML = topCustomers.map((c, i) => `<tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:600;">${i+1}. ${escapeHtml(c[0])}</td><td style="padding:8px; text-align:center;"><span class="pill" style="background:#f3f4f6;">${c[1]}x</span></td></tr>`).join('');
+        tableBody.innerHTML = Object.entries(customerStats).sort((a,b)=>b[1]-a[1]).slice(0,10).map((c,i)=>`<tr style="border-bottom:1px solid #eee;"><td style="padding:8px; font-weight:600;">${i+1}. ${escapeHtml(c[0])}</td><td style="padding:8px; text-align:center;"><span class="pill" style="background:#f3f4f6;">${c[1]}x</span></td></tr>`).join('');
     }
-
+    
+    // Insights
     const totalRevenue = filteredData.reduce((acc, curr) => acc + (parseInt(curr.dp)||0), 0);
     const totalGuest = filteredData.reduce((acc, curr) => acc + (parseInt(curr.jumlah)||0), 0);
     
@@ -2077,7 +2130,7 @@ async function runUIAnalysis() {
 
 
 /**
- * 28. SETTINGS & UTILITIES
+ * 28. SETTINGS & UTILITIES (HELPER)
  */
 document.addEventListener('DOMContentLoaded', () => applySavedBackground());
 
@@ -2085,19 +2138,22 @@ function saveCustomBackground() {
     const url = document.getElementById('bgUrlInput').value.trim();
     if (!url) return showToast("URL kosong", "error");
     localStorage.setItem(BG_STORAGE_KEY, url);
-    applySavedBackground(); showToast("Background diganti", "success");
+    applySavedBackground(); 
+    showToast("Background diganti", "success");
 }
 
 function resetBackground() {
     localStorage.removeItem(BG_STORAGE_KEY);
-    applySavedBackground(); showToast("Reset default");
+    applySavedBackground(); 
+    showToast("Reset default");
 }
 
 function setBgFromPreset(el) {
     let style = el.style.backgroundImage;
     let url = style.slice(4, -1).replace(/"/g, "");
     localStorage.setItem(BG_STORAGE_KEY, url);
-    applySavedBackground(); showToast("Tema diterapkan");
+    applySavedBackground(); 
+    showToast("Tema diterapkan");
 }
 
 function applySavedBackground() {
@@ -2117,6 +2173,7 @@ async function runNotificationCheck() {
     if(Object.keys(dataReservasi).length === 0) return;
     const now = new Date();
     let count = 0, html = '';
+
     for(const k in dataReservasi) {
         dataReservasi[k].forEach(r => {
             if(!r.thankYouSent && r.nomorHp) {
@@ -2130,8 +2187,10 @@ async function runNotificationCheck() {
     }
     const badge = document.getElementById('notification-badge');
     const badgeMobile = document.getElementById('notification-badge-mobile');
+    
     if(badge) { badge.textContent = count; badge.style.display = count>0?'flex':'none'; }
     if(badgeMobile) { badgeMobile.style.display = count>0?'block':'none'; }
+    
     document.getElementById('notification-list-ul').innerHTML = html || '<li style="padding:15px; text-align:center; color:#999;">Tidak ada pengingat.</li>';
 }
 
@@ -2139,8 +2198,23 @@ function sendThankYouMessage(id, nm, hp) {
     const msg = `Halo Kak *${nm}* 👋,\n\nTerima kasih banyak sudah berkunjung ke *Dolan Sawah* hari ini. 🙏\n\nJika berkenan, kami sangat menghargai masukan atau review Kakak. Ditunggu kedatangannya kembali! ✨`;
     window.open(`https://wa.me/${cleanPhoneNumber(hp)}?text=${encodeURIComponent(msg)}`, '_blank');
     db.collection('reservations').doc(id).update({ thankYouSent: true });
+    
     const btn = document.getElementById(`thank-btn-${id}`);
     if(btn) { btn.disabled=true; btn.style.opacity=0.5; }
+}
+
+// --- FUNGSI HELPER WA YANG HILANG SEBELUMNYA ---
+function formatMenuForWA(menus) {
+    if (!menus || !Array.isArray(menus) || menus.length === 0) return "  - (Belum ada menu)";
+    
+    return menus.map(m => {
+        let itemStr = `  - *${m.quantity}x ${m.name}*`;
+        if (detailMenu[m.name] && detailMenu[m.name].length > 0) {
+            const subItems = detailMenu[m.name].map(d => `      • ${d}`).join('\n');
+            itemStr += `\n${subItems}`;
+        }
+        return itemStr;
+    }).join('\n');
 }
 
 function contactPersonal(id) {
@@ -2151,56 +2225,113 @@ function contactPersonal(id) {
     }
     if (!r) return showToast("Data tidak ditemukan", "error");
     if (!r.nomorHp) return showToast("Tidak ada nomor HP", "error");
-    const dpStatusText = r.dp > 0 ? `Rp ${formatRupiah(r.dp)} (via ${r.tipeDp || 'Transfer'}) (Sudah diterima)` : `Belum ada DP`;
-    let menuText = "  - (Belum ada menu)";
-    if(r.menus && r.menus.length) {
-        menuText = r.menus.map(m => {
-            let s = `  - *${m.quantity}x ${m.name}*`;
-            if (detailMenu[m.name] && detailMenu[m.name].length > 0) s += `\n` + detailMenu[m.name].map(d => `      • ${d}`).join('\n');
-            return s;
-        }).join('\n');
-    }
-    const msg = `Halo Kak *${r.nama}* 👋,\n\nKami dari *Dolan Sawah* ingin mengkonfirmasi reservasi:\n\n🗓️ *Tanggal:* ${r.date}\n⏰ *Jam:* ${r.jam}\n📍 *Tempat:* ${r.tempat}\n👥 *Jumlah:* ${r.jumlah} orang\n\n🍽️ *Pesanan Menu:*\n${menuText}\n\n💰 *DP:* ${dpStatusText}\n\nMohon balas pesan ini untuk konfirmasi. Terima kasih! 😊`;
+
+    const menuText = formatMenuForWA(r.menus);
+    const dpStatusText = r.dp > 0 
+        ? `Rp ${formatRupiah(r.dp)} (via ${r.tipeDp || 'Transfer'}) (Sudah diterima)`
+        : `Belum ada DP`;
+
+    const msg = `Halo Kak *${r.nama}* 👋,\n\n` +
+                `Kami dari *Dolan Sawah* ingin mengkonfirmasi reservasi:\n\n` +
+                `🗓️ *Tanggal:* ${r.date}\n` +
+                `⏰ *Jam:* ${r.jam}\n` +
+                `📍 *Tempat:* ${r.tempat}\n` +
+                `👥 *Jumlah:* ${r.jumlah} orang\n\n` +
+                `🍽️ *Pesanan Menu:*\n${menuText}\n\n` +
+                `💰 *DP:* ${dpStatusText}\n\n` +
+                `Mohon balas pesan ini untuk konfirmasi. Terima kasih! 😊`;
+
     window.open(`https://wa.me/${cleanPhoneNumber(r.nomorHp)}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 function shareViaWhatsApp(type) {
     if (type === 'day') {
         if (!tanggalDipilih) return showToast("Pilih tanggal dulu!", "error");
+        
         const list = dataReservasi[tanggalDipilih] || [];
         if (list.length === 0) return showToast("Data kosong pada tanggal ini", "error");
-        let msg = `*📋 LAPORAN HARIAN DOLAN SAWAH*\n*Tanggal:* ${tanggalDipilih} ${monthNames[currentMonth]} ${currentYear}\n=========================\n\n`;
+        
+        let msg = `*📋 LAPORAN HARIAN DOLAN SAWAH*\n` +
+                  `*Tanggal:* ${tanggalDipilih} ${monthNames[currentMonth]} ${currentYear}\n` +
+                  `=========================\n\n`;
+        
         list.sort((a,b) => (a.jam||'').localeCompare(b.jam||''));
+
         list.forEach((r, i) => {
-            msg += `*${i+1}. ${r.nama}* (${r.jam})\n   Pax: ${r.jumlah} | Lok: ${r.tempat}\n   Status: ${r.dp > 0 ? '*LUNAS DP*' : '*BELUM DP*'}\n\n`;
+            const dpText = r.dp > 0 ? `*LUNAS DP*` : `*BELUM DP*`;
+            msg += `*${i+1}. ${r.nama}* (${r.jam})\n`;
+            msg += `   Pax: ${r.jumlah} | Lok: ${r.tempat}\n`;
+            msg += `   Status: ${dpText}\n\n`;
         });
+        
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     }
 }
 
-// Helpers
-function formatRupiah(amount) { if (amount == null || isNaN(amount)) return '0'; return Number(amount).toLocaleString('id-ID'); }
-function cleanPhoneNumber(phone) { if(!phone) return ''; return phone.toString().replace(/[^0-9]/g, ''); }
-function isValidPhone(phone) { const cleaned = cleanPhoneNumber(phone); return /^[0-9]{10,14}$/.test(cleaned); }
-function escapeHtml(text) { if (!text) return text; return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+// --- UTILITIES DASAR (EXPANDED) ---
+function formatRupiah(amount) {
+    if (amount === null || amount === undefined || isNaN(amount)) return '0';
+    return Number(amount).toLocaleString('id-ID');
+}
+
+function cleanPhoneNumber(phone) { 
+    if(!phone) return '';
+    return phone.toString().replace(/[^0-9]/g, ''); 
+}
+
+function isValidPhone(phone) { 
+    const cleaned = cleanPhoneNumber(phone);
+    return /^[0-9]{10,14}$/.test(cleaned); 
+}
+
+function escapeHtml(text) {
+  if (!text) return text;
+  return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+}
+
 function showToast(message, type = 'success') {
     let icon = type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
     if(type === 'info') icon = '<i class="fas fa-info-circle"></i>';
+    
     toast.innerHTML = `${icon} &nbsp; ${message}`;
     toast.className = `toast ${type}`;
     toast.style.display = 'block';
+    
     setTimeout(() => { toast.style.opacity = 1; }, 10);
-    setTimeout(() => { toast.style.opacity = 0; setTimeout(() => { toast.style.display = 'none'; }, 300); }, 3500);
+    setTimeout(() => { 
+        toast.style.opacity = 0;
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 3500);
 }
+
 function showLoader() { if(loadingOverlay) loadingOverlay.style.display = 'flex'; }
 function hideLoader() { if(loadingOverlay) loadingOverlay.style.display = 'none'; }
+
 function closePopup(popupId) {
     const popup = document.getElementById(popupId);
     if(popup) popup.style.display = 'none';
     if(overlay) overlay.style.display = 'none';
 }
-function forceSync() { showLoader(); setTimeout(() => location.reload(), 800); }
-function toggleNotificationDropdown(e) { e.stopPropagation(); const d=document.getElementById('notification-dropdown'); d.style.display=d.style.display==='block'?'none':'block'; }
-window.addEventListener('click', () => { const d=document.getElementById('notification-dropdown'); if(d) d.style.display='none'; });
 
-console.log("Dolan Sawah App Loaded: Ultimate Edition - Final Fixed Version.");
+function forceSync() { 
+    showLoader(); 
+    setTimeout(() => location.reload(), 800); 
+}
+
+function toggleNotificationDropdown(e) { 
+    e.stopPropagation(); 
+    const d = document.getElementById('notification-dropdown'); 
+    d.style.display = d.style.display === 'block' ? 'none' : 'block'; 
+}
+
+window.addEventListener('click', () => { 
+    const d = document.getElementById('notification-dropdown'); 
+    if(d) d.style.display = 'none'; 
+});
+
+console.log("Dolan Sawah App Loaded: Ultimate Edition - Final (WA, Print Detail & Utilities Fixed).");
