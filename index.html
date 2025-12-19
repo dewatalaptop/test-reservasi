@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Dolan Sawah Manager - Ultimate Version</title>
+  <title>Dolan Sawah Manager - Luxury Edition</title>
 
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,37 +23,46 @@
 </head>
 <body>
 
-  <div class="bg-nature"></div>
+  <div class="bg-nature" id="dynamic-bg"></div>
   <div class="bg-overlay-glass"></div>
 
-  <div id="login-container" class="glass-login-wrapper">
-    <div class="login-box glass-card">
-      <div class="login-header">
-        <i class="fas fa-leaf logo-icon"></i>
-        <h2>Dolan Sawah</h2>
-        <p>Management System</p>
+  <div id="login-container" class="login-wrapper glass-blur">
+    <div class="login-card glass-panel">
+      <div class="brand-logo">
+        <i class="fas fa-leaf"></i>
       </div>
+      <h2>Dolan Sawah</h2>
+      <p>Management System</p>
       
       <div class="input-group">
         <i class="fas fa-envelope"></i>
-        <input type="email" id="loginEmail" placeholder="Email Admin">
+        <input type="email" id="loginEmail" placeholder="Email Admin" class="glass-input">
       </div>
       <div class="input-group">
         <i class="fas fa-lock"></i>
-        <input type="password" id="loginPassword" placeholder="Password">
+        <input type="password" id="loginPassword" placeholder="Password" class="glass-input">
       </div>
       
-      <button onclick="handleLogin()" class="btn-primary-gradient full-width">Masuk Dashboard</button>
-      <p id="login-error" class="error-msg">Kredensial tidak valid.</p>
+      <button onclick="handleLogin()" class="btn-primary full-width">Masuk Dashboard</button>
+      <p id="login-error" class="error-text">Email atau password salah.</p>
     </div>
   </div>
 
   <div id="app-layout" style="display:none;">
     
-    <button id="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+    <div class="mobile-header glass-header">
+        <button id="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <span class="header-brand">Dolan Sawah</span>
+        <div class="header-actions-mobile">
+            <div class="notif-icon" onclick="toggleNotificationDropdown(event)">
+                <i class="far fa-bell"></i>
+                <span id="notification-badge-mobile" class="badge-dot" style="display:none;"></span>
+            </div>
+        </div>
+    </div>
 
     <div class="sidebar glass-sidebar" id="sidebar">
-      <div class="brand">
+      <div class="sidebar-brand">
         <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
       </div>
       
@@ -72,33 +81,37 @@
           <i class="fas fa-database"></i> Data Master
         </div>
         <div class="nav-item" onclick="switchTab('broadcast')">
-          <i class="fas fa-bullhorn"></i> Broadcast WA
+          <i class="fab fa-whatsapp"></i> Broadcast WA
         </div>
         <div class="nav-item" onclick="switchTab('analysis')">
           <i class="fas fa-chart-pie"></i> Analisis Data
         </div>
+        <div class="nav-item" onclick="switchTab('settings')">
+          <i class="fas fa-cog"></i> Pengaturan
+        </div>
       </div>
 
       <div class="sidebar-footer">
-        <button class="btn-logout" id="logout-button" onclick="handleLogout()">
+        <button class="btn-logout" onclick="handleLogout()">
             <i class="fas fa-sign-out-alt"></i> Keluar
         </button>
       </div>
     </div>
 
-    <div class="main-content" id="main-container">
+    <div class="main-content">
       
-      <header class="top-header glass-header">
+      <header class="top-header glass-header-desktop">
         <div class="header-left">
             <h2 id="page-title">Dashboard</h2>
             <small id="current-date-display"></small>
         </div>
         <div class="header-right">
-            <div id="notification-bell-container" class="notif-btn" onclick="toggleNotificationDropdown(event)">
+            <div id="notification-bell-container" class="icon-btn" onclick="toggleNotificationDropdown(event)">
                 <i class="far fa-bell"></i>
-                <span id="notification-badge" class="notif-badge" style="display: none;">0</span>
-                <div id="notification-dropdown" class="notification-dropdown glass-card">
-                  <div class="dropdown-header"><i class="fas fa-clock"></i> Pengingat "Say Thanks"</div>
+                <span id="notification-badge" class="badge-count" style="display: none;">0</span>
+                
+                <div id="notification-dropdown" class="glass-dropdown">
+                  <div class="dropdown-head">Pengingat "Say Thanks"</div>
                   <ul id="notification-list-ul"></ul>
                 </div>
             </div>
@@ -107,47 +120,55 @@
 
       <div id="tab-dashboard" class="content-section active">
         <div class="stats-grid">
-            <div class="stat-card glass-card">
-              <div class="stat-icon icon-blue"><i class="fas fa-users"></i></div>
+            <div class="stat-card glass-panel">
+              <div class="stat-icon blue"><i class="fas fa-users"></i></div>
               <div class="stat-info">
                   <h4>Tamu Hari Ini</h4>
                   <span class="value" id="stat-today-count">0</span>
               </div>
             </div>
-            <div class="stat-card glass-card clickable" onclick="switchTab('inbox')">
-              <div class="stat-icon icon-orange"><i class="fas fa-inbox"></i></div>
+            <div class="stat-card glass-panel clickable" onclick="switchTab('inbox')">
+              <div class="stat-icon orange"><i class="fas fa-inbox"></i></div>
               <div class="stat-info">
-                  <h4>Request Pending</h4>
+                  <h4>Pending Request</h4>
                   <span class="value" id="stat-pending-count">0</span>
               </div>
             </div>
-            <div class="stat-card glass-card">
-              <div class="stat-icon icon-green"><i class="fas fa-wallet"></i></div>
+            <div class="stat-card glass-panel">
+              <div class="stat-icon green"><i class="fas fa-wallet"></i></div>
               <div class="stat-info">
-                  <h4>Omzet DP (Bulan Ini)</h4>
+                  <h4>Omzet DP (Bulan)</h4>
                   <span class="value" id="stat-revenue-month">Rp 0</span>
               </div>
             </div>
         </div>
 
         <div class="dashboard-split">
-            <div class="glass-card card-box">
+            <div class="glass-panel card-box">
                 <div class="card-header">
-                    <h3><i class="fas fa-history"></i> Reservasi Terbaru Masuk</h3>
+                    <h3><i class="fas fa-clock"></i> Reservasi Terbaru</h3>
                 </div>
-                <div id="dashboard-recent-list" class="recent-list-container">
-                    <p class="loading-text">Memuat data...</p>
+                <div id="dashboard-recent-list" class="list-container">
+                    <p class="text-center loading-text">Memuat data...</p>
                 </div>
             </div>
-            <div class="glass-card card-box">
+            <div class="glass-panel card-box">
                 <div class="card-header">
                     <h3><i class="fas fa-bolt"></i> Menu Cepat</h3>
                 </div>
                 <div class="quick-actions-grid">
-                    <button class="btn-action" onclick="showAddForm()"><i class="fas fa-plus-circle"></i> Input Manual</button>
-                    <button class="btn-action" onclick="switchTab('inbox')"><i class="fas fa-tasks"></i> Cek Inbox</button>
-                    <button class="btn-action" onclick="showBroadcastMain()"><i class="fab fa-whatsapp"></i> Promo WA</button>
-                    <button class="btn-action" onclick="forceSync()"><i class="fas fa-sync-alt"></i> Refresh App</button>
+                    <button class="btn-action" onclick="showAddForm()">
+                        <i class="fas fa-plus-circle"></i> Input Manual
+                    </button>
+                    <button class="btn-action" onclick="switchTab('inbox')">
+                        <i class="fas fa-check-double"></i> Cek Inbox
+                    </button>
+                    <button class="btn-action" onclick="showBroadcastMain()">
+                        <i class="fab fa-whatsapp"></i> Promo WA
+                    </button>
+                    <button class="btn-action" onclick="forceSync()">
+                        <i class="fas fa-sync-alt"></i> Refresh App
+                    </button>
                 </div>
             </div>
         </div>
@@ -155,21 +176,21 @@
 
       <div id="tab-inbox" class="content-section">
         <div class="section-tools">
-            <button class="btn-primary-gradient" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Data</button>
+            <button class="btn-primary" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Inbox</button>
         </div>
-        <div id="inbox-container" class="request-grid">
+        <div id="inbox-container" class="grid-cards">
             </div>
       </div>
 
       <div id="tab-calendar" class="content-section">
-        <div class="glass-card calendar-wrapper">
+        <div class="glass-panel calendar-wrapper">
             <div class="calendar-header-custom">
-                <div class="calendar-nav">
+                <div class="cal-nav-group">
                     <button onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button>
-                    <div class="month-year" id="monthYear">...</div>
+                    <div class="month-label" id="monthYear">...</div>
                     <button onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
                 </div>
-                <button class="btn-secondary-outlined" onclick="goToToday()">Hari Ini</button>
+                <button class="btn-today" onclick="goToToday()">Hari Ini</button>
             </div>
             
             <div class="calendar-weekdays">
@@ -178,155 +199,190 @@
             <div class="calendar-days" id="calendar"></div> 
         </div>
 
-        <div id="reservation-view-container" style="display: none; margin-top: 20px;">
-            <div class="glass-card detail-view-card">
-                <div class="detail-view-header">
+        <div id="reservation-view-container" style="display: none;">
+            <div class="glass-panel detail-card">
+                <div class="detail-header">
                     <h3 id="reservation-view-title">Detail Reservasi</h3>
                     <div class="detail-actions">
-                        <button class="btn-sm btn-primary" onclick="showAddForm()"><i class="fas fa-plus"></i></button>
-                        <button class="btn-sm btn-whatsapp" onclick="shareViaWhatsApp('day')"><i class="fab fa-whatsapp"></i></button>
-                        <button class="btn-sm btn-info" onclick="printData()"><i class="fas fa-print"></i></button>
-                        <button class="btn-sm btn-danger" onclick="kembaliKeKalender()"><i class="fas fa-times"></i></button>
+                        <button class="btn-icon" onclick="showAddForm()"><i class="fas fa-plus"></i></button>
+                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')"><i class="fab fa-whatsapp"></i></button>
+                        <button class="btn-icon" onclick="printData()"><i class="fas fa-print"></i></button>
+                        <button class="btn-icon danger" onclick="kembaliKeKalender()"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
                 
-                <div class="search-bar">
+                <div class="search-wrapper">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari nama, tempat, atau menu...">
+                    <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari nama, tempat..." class="glass-input">
                 </div>
 
-                <div id="reservation-detail-list" class="detail-list-grid"></div>
+                <div id="reservation-detail-list" class="detail-list"></div>
             </div>
         </div>
       </div>
 
       <div id="tab-data" class="content-section">
-        <div class="data-master-layout">
-            <div class="glass-card">
+        <div class="data-grid">
+            <div class="glass-panel">
                 <div class="card-header-flex">
-                    <h3><i class="fas fa-utensils"></i> Database Menu</h3>
+                    <h3>Daftar Menu</h3>
                     <button class="btn-sm btn-primary" onclick="showMenuManagement()">Kelola</button>
                 </div>
-                <div id="preview-menu-list" class="master-list-preview"></div>
+                <div id="preview-menu-list" class="scroll-list"></div>
             </div>
-            <div class="glass-card">
+            <div class="glass-panel">
                 <div class="card-header-flex">
-                    <h3><i class="fas fa-map-marker-alt"></i> Database Tempat</h3>
+                    <h3>Daftar Tempat</h3>
                     <button class="btn-sm btn-primary" onclick="showLocationManagement()">Kelola</button>
                 </div>
-                <div id="preview-location-list" class="master-list-preview"></div>
+                <div id="preview-location-list" class="scroll-list"></div>
             </div>
-            <div class="glass-card full-width">
-                 <div class="card-header-flex"><h3><i class="fas fa-toolbox"></i> Utilitas Data</h3></div>
-                 <div class="tools-buttons">
-                    <button class="btn-tool" onclick="showExportDataPopup()"><i class="fas fa-file-code"></i> Backup ASCII</button>
-                    <button class="btn-tool" onclick="showCustomerMenu()"><i class="fas fa-address-book"></i> Database Customer</button>
+            <div class="glass-panel full-width">
+                 <div class="card-header"><h3>Tools Data</h3></div>
+                 <div class="tools-container">
+                    <button class="btn-tool" onclick="showExportDataPopup()"><i class="fas fa-file-code"></i> Backup Data</button>
+                    <button class="btn-tool" onclick="showCustomerMenu()"><i class="fas fa-address-book"></i> Customer DB</button>
                  </div>
             </div>
         </div>
       </div>
 
       <div id="tab-broadcast" class="content-section">
-          <div class="glass-card broadcast-center">
-              <div class="broadcast-icon"><i class="fab fa-whatsapp"></i></div>
+          <div class="glass-panel center-content">
+              <div class="big-icon"><i class="fab fa-whatsapp"></i></div>
               <h3>Broadcast Promosi</h3>
-              <p>Kirim pesan massal ke seluruh database pelanggan yang pernah reservasi.</p>
-              <div class="broadcast-actions">
-                  <button class="btn-primary-gradient" onclick="showBroadcastSettings()">1. Atur Template Pesan</button>
-                  <button class="btn-success-gradient" onclick="showBroadcastList()">2. Pilih Kontak & Kirim</button>
+              <p>Kirim pesan massal ke pelanggan Anda.</p>
+              <div class="action-row">
+                  <button class="btn-primary" onclick="showBroadcastSettings()">Atur Pesan</button>
+                  <button class="btn-success" onclick="showBroadcastList()">Mulai Kirim</button>
               </div>
           </div>
       </div>
 
       <div id="tab-analysis" class="content-section">
-        <div class="glass-card">
+        <div class="glass-panel">
              <div class="card-header-flex">
-                <h3><i class="fas fa-chart-line"></i> Grafik Kunjungan</h3>
-                <select id="anl-year-ui" onchange="runUIAnalysis()" class="year-select"></select>
+                <h3>Analisis Performa</h3>
+                <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-select"></select>
              </div>
-             <div class="chart-wrapper">
+             <div class="chart-container">
                  <canvas id="mainChart"></canvas>
              </div>
-             <div id="quick-insights" class="insights-grid"></div>
-             <div style="text-align:center; margin-top:20px;">
-                 <button class="btn-secondary-outlined" onclick="showAnalysis()">Buka Analisis Detail</button>
+             <div id="quick-insights" class="insights-row"></div>
+             <div class="center-btn">
+                 <button class="btn-outline" onclick="showAnalysis()">Analisis Detail</button>
              </div>
         </div>
       </div>
 
-    </div> </div> <div class="overlay" id="overlay"></div>
+      <div id="tab-settings" class="content-section">
+          <div class="glass-panel">
+              <div class="card-header">
+                  <h3><i class="fas fa-image"></i> Tampilan Background</h3>
+              </div>
+              <div style="padding: 20px;">
+                  <p>Ganti background aplikasi sesuai suasana hati Anda.</p>
+                  
+                  <div class="input-group-row">
+                      <input type="text" id="bgUrlInput" class="glass-input" placeholder="Tempel URL Gambar di sini...">
+                      <button onclick="saveCustomBackground()" class="btn-primary">Simpan</button>
+                  </div>
+                  <button onclick="resetBackground()" class="btn-danger-outline btn-sm" style="margin-top:10px;">Reset Default</button>
+                  
+                  <h4 style="margin-top:20px;">Rekomendasi Tema:</h4>
+                  <div class="theme-grid">
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1536617621239-1b32d034356e?q=80&w=1974');" onclick="setBgFromPreset(this)">
+                        <span>Sawah Pagi</span>
+                      </div>
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232');" onclick="setBgFromPreset(this)">
+                        <span>Sunset Bali</span>
+                      </div>
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1740');" onclick="setBgFromPreset(this)">
+                        <span>Hijau Segar</span>
+                      </div>
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=80&w=1950');" onclick="setBgFromPreset(this)">
+                        <span>Malam Syahdu</span>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+    </div> 
+  </div>
+
+  <div class="overlay" id="overlay"></div>
   <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
   <div class="toast" id="toast"></div>
 
   <div id="addFormPopup" class="popup-glass">
-    <div class="popup-header">
-        <h3><i class="fas fa-plus-circle"></i> Input Reservasi</h3>
-        <button class="close-popup-btn" onclick="closePopup('addFormPopup')">&times;</button>
+    <div class="popup-head">
+        <h3>Input Reservasi</h3>
+        <button class="close-btn" onclick="closePopup('addFormPopup')">&times;</button>
     </div>
     <form id="reservation-form">
       <div class="form-group">
           <label>Nama Pemesan</label>
-          <input type="text" id="nama" class="form-input" required />
-          <span class="error-message" id="nama-error"></span>
+          <input type="text" id="nama" class="glass-input" required />
+          <span class="err-msg" id="nama-error"></span>
       </div>
       <div class="form-row">
           <div class="form-group">
-              <label>Nomor HP (WA)</label>
-              <input type="tel" id="nomorHp" class="form-input" placeholder="08..." />
-              <span class="error-message" id="nomorHp-error"></span>
+              <label>No. HP</label>
+              <input type="tel" id="nomorHp" class="glass-input" placeholder="08..." />
+              <span class="err-msg" id="nomorHp-error"></span>
           </div>
           <div class="form-group">
               <label>Jam</label>
-              <input type="time" id="jam" class="form-input" required />
-              <span class="error-message" id="jam-error"></span>
+              <input type="time" id="jam" class="glass-input" required />
+              <span class="err-msg" id="jam-error"></span>
           </div>
       </div>
-
       <div class="form-row">
           <div class="form-group">
-              <label>Jumlah Org</label>
-              <input type="number" id="jumlah" class="form-input" min="1" required />
-              <span class="error-message" id="jumlah-error"></span>
+              <label>Jml Org</label>
+              <input type="number" id="jumlah" class="glass-input" min="1" required />
+              <span class="err-msg" id="jumlah-error"></span>
           </div>
           <div class="form-group">
               <label>Tempat</label>
-              <select id="tempat" class="form-input" required onchange="updateCapacityInfo('reservation-form')"></select>
-              <span id="capacity-info" class="info-text"></span>
-              <span class="error-message" id="tempat-error"></span>
+              <select id="tempat" class="glass-input" required onchange="updateCapacityInfo('reservation-form')"></select>
+              <small id="capacity-info"></small>
+              <span class="err-msg" id="tempat-error"></span>
           </div>
       </div>
       
-      <div class="form-section-highlight">
+      <div class="highlight-box">
           <div class="form-row">
               <div class="form-group">
-                  <label>Nominal DP (Rp)</label>
-                  <input type="number" id="dp" class="form-input" value="0" min="0" />
+                  <label>DP (Rp)</label>
+                  <input type="number" id="dp" class="glass-input" value="0" />
               </div>
               <div class="form-group">
-                  <label>Metode Bayar</label>
-                  <select id="tipeDp" class="form-input">
-                    <option value="">- Tanpa DP -</option><option>Cash</option><option>QRIS</option>
-                    <option>Transfer BCA</option><option>Transfer Mandiri</option><option>Transfer BRI</option>
+                  <label>Via</label>
+                  <select id="tipeDp" class="glass-input">
+                    <option value="">- Tanpa DP -</option><option>Transfer BCA</option>
+                    <option>Transfer Mandiri</option><option>QRIS</option><option>Cash</option>
                   </select>
               </div>
           </div>
       </div>
       
       <div class="form-group">
-          <label>Paket Menu <span class="error-message" id="menus-error"></span></label>
+          <label>Menu Pesanan <span class="err-msg" id="menus-error"></span></label>
           <div id="selected-menus-container"></div>
           <button type="button" class="btn-dashed" id="add-menu-btn" onclick="addMenuSelectionRow('reservation-form')">
-              <i class="fas fa-plus"></i> Tambah Menu
+              + Tambah Menu
           </button>
       </div>
 
       <div class="form-group">
-          <label>Catatan Tambahan</label>
-          <textarea id="tambahan" class="form-input" rows="2"></textarea>
+          <label>Catatan</label>
+          <textarea id="tambahan" class="glass-input" rows="2"></textarea>
       </div>
 
-      <div class="popup-footer">
-        <button type="button" class="btn-primary-gradient full-width" onclick="simpanReservasi()">Simpan Data</button>
+      <div class="popup-foot">
+        <button type="button" class="btn-primary full-width" onclick="simpanReservasi()">Simpan</button>
       </div>
     </form>
   </div>
@@ -337,39 +393,37 @@
   <div id="customerListPopup" class="popup-glass"></div>
   <div id="analysisPopup" class="popup-glass"></div>
   <div id="broadcastListPopup" class="popup-glass large"></div>
+  <div id="broadcastMainPopup" class="popup-glass"></div>
   
+  <div id="broadcastSettingsPopup" class="popup-glass">
+    <div class="popup-head"><h3>Template Pesan</h3></div>
+    <textarea id="broadcastMessage" class="glass-input" rows="5" placeholder="Halo kak..."></textarea>
+    <div class="popup-foot">
+        <button onclick="saveBroadcastMessage()" class="btn-primary">Simpan</button>
+        <button onclick="closePopup('broadcastSettingsPopup')" class="btn-outline">Tutup</button>
+    </div>
+  </div>
+
   <div id="exportDataPopup" class="popup-glass">
-    <h3>Export Data</h3>
-    <textarea id="export-data-output" class="code-area" readonly></textarea>
-    <div class="popup-footer">
-        <button type="button" class="btn-primary-gradient" onclick="copyExportCode()">Salin Kode</button>
-        <button type="button" class="btn-secondary-outlined" onclick="closePopup('exportDataPopup')">Tutup</button>
+    <div class="popup-head"><h3>Export Data</h3></div>
+    <textarea id="export-data-output" class="glass-input code-view" readonly></textarea>
+    <div class="popup-foot">
+        <button onclick="copyExportCode()" class="btn-primary">Salin</button>
+        <button onclick="closePopup('exportDataPopup')" class="btn-outline">Tutup</button>
     </div>
   </div>
 
   <div id="printOptionsPopup" class="popup-glass">
-    <h3>Opsi Cetak Laporan</h3>
-    <div id="print-options-form">
-        <div class="checklist-grid">
-            <label><input type="checkbox" id="print-detail-menu" checked> Detail Menu</label>
-            <label><input type="checkbox" id="print-kontak" checked> Kontak HP</label>
-            <label><input type="checkbox" id="print-dp" checked> Status DP</label>
-            <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
-        </div>
-        <div class="popup-footer">
-            <button type="button" class="btn-primary-gradient" onclick="executePrint()">Lanjut Cetak</button>
-            <button type="button" class="btn-danger-outlined" onclick="closePopup('printOptionsPopup')">Batal</button>
-        </div>
+    <div class="popup-head"><h3>Cetak Laporan</h3></div>
+    <div id="print-options-form" class="checklist-grid">
+        <label><input type="checkbox" id="print-detail-menu" checked> Menu</label>
+        <label><input type="checkbox" id="print-kontak" checked> Kontak</label>
+        <label><input type="checkbox" id="print-dp" checked> DP</label>
+        <label><input type="checkbox" id="print-tambahan" checked> Note</label>
     </div>
-  </div>
-
-  <div id="broadcastMainPopup" class="popup-glass"></div> <div id="broadcastSettingsPopup" class="popup-glass">
-    <h3>Atur Pesan Broadcast</h3>
-    <p class="info-text">Gunakan kata <b>kak</b> agar otomatis diganti dengan nama pelanggan.</p>
-    <textarea id="broadcastMessage" class="form-input" rows="5" placeholder="Halo kak! Ada promo baru nih..."></textarea>
-    <div class="popup-footer">
-        <button type="button" class="btn-primary-gradient" onclick="saveBroadcastMessage()">Simpan Template</button>
-        <button type="button" class="btn-secondary-outlined" onclick="closePopup('broadcastSettingsPopup'); showBroadcastMain()">Kembali</button>
+    <div class="popup-foot">
+        <button onclick="executePrint()" class="btn-primary">Print</button>
+        <button onclick="closePopup('printOptionsPopup')" class="btn-outline">Batal</button>
     </div>
   </div>
 
