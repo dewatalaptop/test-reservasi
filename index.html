@@ -3,13 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Dolan Sawah Management System - V6.0 Integrated</title>
+  <title>Dolan Sawah Manager - Premium</title>
 
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,305 +19,316 @@
 </head>
 <body>
 
-  <div id="login-container"> <div class="login-box">
-      <h2 style="color:var(--primary-dark); margin-bottom: 10px;"><i class="fas fa-leaf"></i> Admin Panel</h2>
-      <p style="color:#666; margin-bottom: 20px;">Sistem Reservasi Dolan Sawah</p>
+  <div class="bg-image"></div>
+  <div class="bg-overlay"></div>
+
+  <div id="login-container" class="glass-panel centered">
+    <div class="login-content">
+      <div class="brand-logo">
+        <i class="fas fa-leaf"></i>
+      </div>
+      <h2>Dolan Sawah</h2>
+      <p>Management System</p>
       
-      <div class="input-group">
+      <div class="input-wrapper">
         <i class="fas fa-envelope"></i>
         <input type="email" id="loginEmail" placeholder="Email Admin">
       </div>
-      <div class="input-group">
+      <div class="input-wrapper">
         <i class="fas fa-lock"></i>
         <input type="password" id="loginPassword" placeholder="Password">
       </div>
       
-      <button onclick="handleLogin()" class="btn-login-submit">Masuk Dashboard</button>
-      <p id="login-error" style="color:red; display:none; margin-top:10px; font-size:0.9rem;">Email atau password salah.</p>
+      <button onclick="handleLogin()" class="btn-primary full-width">Masuk Dashboard</button>
+      <p id="login-error" class="error-text">Kredensial tidak valid.</p>
     </div>
   </div>
 
-  <div id="app-layout" style="display:none;"> <button id="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+  <div id="app-layout" style="display:none;">
+    
+    <div class="mobile-header glass-header">
+        <button id="mobile-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <span class="brand-text">Dolan Sawah</span>
+        <div class="header-right">
+            <div class="notif-icon" onclick="toggleNotificationDropdown(event)">
+                <i class="far fa-bell"></i>
+                <span id="notification-badge" class="badge">0</span>
+                <div id="notification-dropdown" class="glass-dropdown">
+                    <div class="dropdown-head">Pengingat "Say Thanks"</div>
+                    <ul id="notification-list-ul"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <div class="sidebar" id="sidebar">
-      <div class="brand">
-        <i class="fas fa-seedling"></i> Dolan Sawah
+    <div class="sidebar glass-sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
       </div>
       
       <div class="nav-menu">
-        <div class="nav-item active" onclick="switchTab('dashboard')">
-          <i class="fas fa-home"></i> Dashboard
-        </div>
+        <div class="nav-item active" onclick="switchTab('dashboard')"><i class="fas fa-th-large"></i> Dashboard</div>
         <div class="nav-item" onclick="switchTab('inbox')">
-          <i class="fas fa-inbox"></i> Permintaan
-          <span class="badge" id="sidebar-badge" style="display:none;">0</span>
+            <i class="fas fa-inbox"></i> Inbox 
+            <span id="sidebar-badge" class="nav-badge" style="display:none;">0</span>
         </div>
-        <div class="nav-item" onclick="switchTab('calendar')">
-          <i class="far fa-calendar-alt"></i> Kalender Utama
-        </div>
-        <div class="nav-item" onclick="switchTab('data')">
-          <i class="fas fa-database"></i> Data Master
-        </div>
-        <div class="nav-item" onclick="switchTab('broadcast')">
-          <i class="fas fa-bullhorn"></i> Broadcast
-        </div>
-        <div class="nav-item" onclick="switchTab('analysis')">
-          <i class="fas fa-chart-pie"></i> Analisis
-        </div>
+        <div class="nav-item" onclick="switchTab('calendar')"><i class="far fa-calendar-check"></i> Kalender</div>
+        <div class="nav-item" onclick="switchTab('data')"><i class="fas fa-database"></i> Data Master</div>
+        <div class="nav-item" onclick="switchTab('broadcast')"><i class="fas fa-bullhorn"></i> Broadcast</div>
+        <div class="nav-item" onclick="switchTab('analysis')"><i class="fas fa-chart-line"></i> Analisis</div>
       </div>
 
-      <div class="sidebar-footer">
-        <button class="btn-logout" id="logout-button" onclick="handleLogout()"> <i class="fas fa-sign-out-alt"></i> Logout
-        </button>
+      <div class="sidebar-foot">
+        <button class="btn-logout" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Keluar</button>
       </div>
     </div>
 
-    <div class="main-content" id="main-container"> <header class="top-header">
-        <div class="header-title">
-            <h2 id="page-title">Dashboard</h2>
-            <small id="current-date-display"></small>
-        </div>
-        <div class="header-tools">
-            <div id="notification-bell-container" onclick="toggleNotificationDropdown(event)">
-                <i class="fas fa-bell"></i>
-                <span id="notification-badge" class="notification-badge" style="display: none;">0</span>
-                <div id="notification-dropdown" class="notification-list-dropdown">
-                  <h4><i class="fas fa-bell"></i> Pengingat Ucapan Terima Kasih</h4>
-                  <ul id="notification-list-ul"></ul>
-                </div>
-            </div>
-        </div>
-      </header>
-
+    <div class="main-content">
+      
       <div id="tab-dashboard" class="content-section active">
-        <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon icon-blue"><i class="fas fa-users"></i></div>
-              <div class="stat-info"><h4>Reservasi Hari Ini</h4><span class="value" id="stat-today-count">0</span></div>
+        <div class="welcome-banner glass-card">
+            <h2 id="page-title">Selamat Datang, Admin!</h2>
+            <p id="current-date-display" class="date-sub"></p>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card glass-card">
+              <div class="icon-box blue"><i class="fas fa-users"></i></div>
+              <div class="stat-text">
+                  <small>Tamu Hari Ini</small>
+                  <h3 id="stat-today-count">0</h3>
+              </div>
             </div>
-            <div class="stat-card" onclick="switchTab('inbox')" style="cursor:pointer;">
-              <div class="stat-icon icon-orange"><i class="fas fa-inbox"></i></div>
-              <div class="stat-info"><h4>Request Pending</h4><span class="value" id="stat-pending-count">0</span></div>
+            <div class="stat-card glass-card" onclick="switchTab('inbox')">
+              <div class="icon-box orange"><i class="fas fa-envelope-open-text"></i></div>
+              <div class="stat-text">
+                  <small>Pending Request</small>
+                  <h3 id="stat-pending-count">0</h3>
+              </div>
             </div>
-            <div class="stat-card">
-              <div class="stat-icon icon-green"><i class="fas fa-money-bill-wave"></i></div>
-              <div class="stat-info"><h4>Omzet DP Bulan Ini</h4><span class="value" id="stat-revenue-month">Rp 0</span></div>
+            <div class="stat-card glass-card">
+              <div class="icon-box green"><i class="fas fa-wallet"></i></div>
+              <div class="stat-text">
+                  <small>Omzet DP (Bulan)</small>
+                  <h3 id="stat-revenue-month">Rp 0</h3>
+              </div>
             </div>
         </div>
 
-        <div class="dashboard-split">
-            <div class="card-box">
-                <h3><i class="fas fa-clock"></i> Reservasi Terbaru</h3>
-                <div id="dashboard-recent-list">
-                    <p class="text-center text-muted">Memuat data...</p>
+        <div class="dashboard-grid">
+            <div class="glass-card">
+                <div class="card-head">
+                    <h4><i class="fas fa-history"></i> Reservasi Terbaru</h4>
                 </div>
+                <div id="dashboard-recent-list" class="recent-list"></div>
             </div>
-            <div class="card-box">
-                <h3><i class="fas fa-bolt"></i> Aksi Cepat</h3>
-                <div class="quick-actions-grid">
-                    <button class="btn-action" onclick="showAddForm()"><i class="fas fa-plus-circle"></i> Input Reservasi</button>
-                    <button class="btn-action" onclick="switchTab('inbox')"><i class="fas fa-check-double"></i> Cek Inbox</button>
-                    <button class="btn-action" onclick="showBroadcastMain()"><i class="fas fa-paper-plane"></i> Kirim Promo</button>
-                    <button class="btn-action" onclick="forceSync()"><i class="fas fa-sync"></i> Refresh Data</button>
+            <div class="glass-card">
+                <div class="card-head">
+                    <h4><i class="fas fa-bolt"></i> Menu Cepat</h4>
+                </div>
+                <div class="quick-actions">
+                    <button onclick="showAddForm()"><i class="fas fa-plus"></i> Input Manual</button>
+                    <button onclick="showBroadcastMain()"><i class="fas fa-paper-plane"></i> Promo WA</button>
+                    <button onclick="forceSync()"><i class="fas fa-sync"></i> Sync Data</button>
                 </div>
             </div>
         </div>
       </div>
 
       <div id="tab-inbox" class="content-section">
-        <div class="section-tools">
-            <button class="btn-primary" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Inbox</button>
+        <div class="section-header">
+            <h3>Inbox Permintaan</h3>
+            <button class="btn-small glass-btn" onclick="initInboxListener()"><i class="fas fa-sync"></i></button>
         </div>
-        <div id="inbox-container" class="request-grid">
-            </div>
+        <div id="inbox-container" class="grid-cards"></div>
       </div>
 
       <div id="tab-calendar" class="content-section">
-        <div class="calendar-wrapper-card">
-            <div class="calendar-header-custom">
-                <div class="month-year" id="monthYear"></div> <div class="calendar-nav">
+        <div class="glass-card calendar-container">
+            <div class="calendar-top">
+                <div class="cal-nav">
                     <button onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button>
-                    <button class="btn-secondary" onclick="goToToday()"><i class="fas fa-calendar-day"></i> Hari Ini</button>
+                    <h3 id="monthYear">...</h3>
                     <button onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <button class="btn-today" onclick="goToToday()">Hari Ini</button>
+            </div>
+            
+            <div class="calendar-grid-header">
+                <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
+            </div>
+            <div class="calendar-grid-body" id="calendar"></div>
+        </div>
+
+        <div id="reservation-view-container" class="glass-card detail-view" style="display:none;">
+            <div class="detail-head">
+                <h3 id="reservation-view-title">Detail</h3>
+                <div class="detail-actions">
+                    <button class="btn-icon" onclick="showAddForm()"><i class="fas fa-plus"></i></button>
+                    <button class="btn-icon" onclick="printData()"><i class="fas fa-print"></i></button>
+                    <button class="btn-icon danger" onclick="kembaliKeKalender()"><i class="fas fa-times"></i></button>
                 </div>
             </div>
             
-            <div class="calendar-weekdays"><div>Min</div> <div>Sen</div> <div>Sel</div> <div>Rab</div> <div>Kam</div> <div>Jum</div> <div>Sab</div></div>
-            <div class="calendar-days" id="calendar"></div> </div>
-
-        <div id="reservation-view-container" style="display: none; margin-top: 20px;">
-            <div class="card-box">
-                <div class="reservation-view-header">
-                    <h3 id="reservation-view-title"></h3>
-                    <div class="header-actions">
-                        <button onclick="showAddForm()"><i class="fas fa-plus"></i> Tambah</button>
-                        <button class="btn-whatsapp" onclick="shareViaWhatsApp('day')"><i class="fab fa-whatsapp"></i> WA</button>
-                        <button class="btn-secondary" onclick="shareViaEmail()"><i class="fas fa-envelope"></i> Email</button>
-                        <button onclick="printData()"><i class="fas fa-print"></i> Print</button>
-                        <button class="btn-danger" onclick="kembaliKeKalender()"><i class="fas fa-times"></i> Tutup</button>
-                    </div>
-                </div>
-                
-                <div class="search-bar-wrapper">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari nama, tempat, atau menu...">
-                </div>
-
-                <div id="reservation-detail-list" class="detail-grid"></div>
+            <div class="search-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari pesanan...">
             </div>
+
+            <div id="reservation-detail-list" class="detail-list-grid"></div>
         </div>
       </div>
 
       <div id="tab-data" class="content-section">
-        <div class="data-master-grid">
-            <div class="card-box">
-                <div class="card-header-flex">
-                    <h3><i class="fas fa-book-open"></i> Daftar Menu</h3>
-                    <button class="btn-sm btn-primary" onclick="showMenuManagement()"><i class="fas fa-edit"></i> Kelola</button>
+        <div class="grid-dual">
+            <div class="glass-card">
+                <div class="card-head">
+                    <h4>Menu Makanan</h4>
+                    <button class="btn-small" onclick="showMenuManagement()">Kelola</button>
                 </div>
                 <div id="preview-menu-list" class="simple-list"></div>
             </div>
-            <div class="card-box">
-                <div class="card-header-flex">
-                    <h3><i class="fas fa-map-marker-alt"></i> Daftar Tempat</h3>
-                    <button class="btn-sm btn-primary" onclick="showLocationManagement()"><i class="fas fa-edit"></i> Kelola</button>
+            <div class="glass-card">
+                <div class="card-head">
+                    <h4>Daftar Tempat</h4>
+                    <button class="btn-small" onclick="showLocationManagement()">Kelola</button>
                 </div>
                 <div id="preview-location-list" class="simple-list"></div>
             </div>
-            <div class="card-box full-width">
-                 <h3><i class="fas fa-tools"></i> Tools Data</h3>
-                 <div class="tools-buttons">
-                    <button class="btn-info" onclick="showExportDataPopup()"><i class="fas fa-file-export"></i> Export Data ASCII</button>
-                    <button class="btn-secondary" onclick="showCustomerMenu()"><i class="fas fa-address-book"></i> Lihat Database Customer</button>
-                 </div>
+            <div class="glass-card full">
+                <div class="card-head"><h4>Tools</h4></div>
+                <div class="tools-grid">
+                    <button class="tool-btn" onclick="showExportDataPopup()"><i class="fas fa-file-code"></i> Backup ASCII</button>
+                    <button class="tool-btn" onclick="showBroadcastList()"><i class="fas fa-address-book"></i> Customer Data</button>
+                </div>
             </div>
         </div>
       </div>
 
       <div id="tab-broadcast" class="content-section">
-          <div class="card-box center-content">
-              <i class="fas fa-bullhorn fa-3x" style="color:var(--accent); margin-bottom:15px;"></i>
+          <div class="glass-card centered-content">
+              <div class="icon-large"><i class="fab fa-whatsapp"></i></div>
               <h3>Broadcast Promosi</h3>
-              <p>Kirim pesan WhatsApp massal ke pelanggan yang tersimpan di database.</p>
-              <div class="action-buttons-center">
-                  <button class="btn-primary" onclick="showBroadcastSettings()"><i class="fas fa-cog"></i> Atur Pesan</button>
-                  <button class="btn-whatsapp" onclick="showBroadcastList()"><i class="fab fa-whatsapp"></i> Mulai Broadcast</button>
+              <p>Kirim pesan massal ke database pelanggan Anda.</p>
+              <div class="btn-group">
+                  <button class="btn-primary" onclick="showBroadcastSettings()">1. Atur Pesan</button>
+                  <button class="btn-success" onclick="showBroadcastList()">2. Pilih Kontak & Kirim</button>
               </div>
           </div>
       </div>
 
       <div id="tab-analysis" class="content-section">
-        <div class="card-box">
-             <div class="card-header-flex">
-                <h3><i class="fas fa-chart-line"></i> Analisis Performa</h3>
-                <div class="analysis-filters">
-                    <select id="anl-year-ui" onchange="runUIAnalysis()"></select>
-                </div>
-             </div>
-             <div class="chart-wrapper">
-                 <canvas id="mainChart"></canvas>
-             </div>
-             <div class="insight-row" id="quick-insights"></div>
-             <div style="text-align:center; margin-top:15px;">
-                 <button class="btn-info" onclick="showAnalysis()">Buka Analisis Detail (Pop-up)</button>
-             </div>
-        </div>
+          <div class="glass-card">
+              <div class="card-head">
+                  <h4>Grafik Kunjungan</h4>
+                  <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-select"></select>
+              </div>
+              <div class="chart-area">
+                  <canvas id="mainChart"></canvas>
+              </div>
+              <div id="quick-insights" class="insights-row"></div>
+          </div>
       </div>
 
-    </div> </div> <div class="overlay" id="overlay"></div>
+    </div> 
+  </div>
+
+  <div class="overlay" id="overlay"></div>
   <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
   <div class="toast" id="toast"></div>
 
-  <div id="addFormPopup" class="popup-form">
-    <h3><i class="fas fa-calendar-plus"></i> Input Reservasi</h3>
+  <div id="addFormPopup" class="popup-glass">
+    <div class="popup-head">
+        <h3>Input Reservasi</h3>
+        <button class="close-btn" onclick="closePopup('addFormPopup')">&times;</button>
+    </div>
     <form id="reservation-form">
-      <label>Nama: <input type="text" id="nama" required /><span class="error-message" id="nama-error"></span></label>
-      <label>Nomor HP: <input type="tel" id="nomorHp" placeholder="Cth: 081234567890" /><span class="error-message" id="nomorHp-error"></span></label>
-      <label>Jam Reservasi: <input type="time" id="jam" required /><span class="error-message" id="jam-error"></span></label>
-      <label>Jumlah Peserta: <input type="number" id="jumlah" min="1" required /><span class="error-message" id="jumlah-error"></span></label>
-      
-      <label>DP (Rupiah): <input type="number" id="dp" value="0" min="0" /></label>
-      <label>Tipe Pembayaran DP: 
-        <select id="tipeDp">
-          <option value="">- Tanpa DP -</option><option>Cash</option><option>QRIS</option><option>Transfer BCA</option><option>Transfer Mandiri</option><option>Transfer BRI</option>
-        </select>
-      </label>
-      
-      <label>Tempat: <select id="tempat" required onchange="updateCapacityInfo('reservation-form')"></select>
-        <span id="capacity-info"></span>
-        <span class="error-message" id="tempat-error"></span>
-      </label>
-      
-      <label>Paket Menu Dipesan: <span class="error-message" id="menus-error"></span></label>
-      <div id="selected-menus-container"></div>
-      <button type="button" class="btn-secondary" id="add-menu-btn" onclick="addMenuSelectionRow('reservation-form')"><i class="fas fa-plus"></i> Tambah Paket</button>
+        <div class="form-group">
+            <label>Nama Pemesan</label>
+            <input type="text" id="nama" class="glass-input" required>
+            <span id="nama-error" class="err"></span>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>No. HP</label>
+                <input type="tel" id="nomorHp" class="glass-input">
+                <span id="nomorHp-error" class="err"></span>
+            </div>
+            <div class="form-group">
+                <label>Jam</label>
+                <input type="time" id="jam" class="glass-input" required>
+                <span id="jam-error" class="err"></span>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Jml Org</label>
+                <input type="number" id="jumlah" class="glass-input" min="1">
+                <span id="jumlah-error" class="err"></span>
+            </div>
+            <div class="form-group">
+                <label>Tempat</label>
+                <select id="tempat" class="glass-input" onchange="updateCapacityInfo('reservation-form')"></select>
+                <small id="capacity-info"></small>
+                <span id="tempat-error" class="err"></span>
+            </div>
+        </div>
+        
+        <div class="form-row bg-accent">
+            <div class="form-group">
+                <label>DP (Rp)</label>
+                <input type="number" id="dp" class="glass-input" value="0">
+            </div>
+            <div class="form-group">
+                <label>Via</label>
+                <select id="tipeDp" class="glass-input">
+                    <option value="">-</option>
+                    <option>Transfer BCA</option><option>Transfer Mandiri</option>
+                    <option>Transfer BRI</option><option>QRIS</option><option>Cash</option>
+                </select>
+            </div>
+        </div>
 
-      <label>Request Tambahan: <textarea id="tambahan"></textarea></label>
-      <div class="popup-actions">
-        <button type="button" onclick="simpanReservasi()"><i class="fas fa-save"></i> Simpan Reservasi</button>
-        <button type="button" class="btn-danger" onclick="closePopup('addFormPopup')"><i class="fas fa-times"></i> Batal</button>
-      </div>
+        <div class="form-group">
+            <label>Menu Pesanan <span id="menus-error" class="err"></span></label>
+            <div id="selected-menus-container"></div>
+            <button type="button" class="btn-dashed" onclick="addMenuSelectionRow('reservation-form')">+ Tambah Menu</button>
+        </div>
+
+        <div class="form-group">
+            <label>Catatan</label>
+            <textarea id="tambahan" class="glass-input" rows="2"></textarea>
+        </div>
+
+        <div class="popup-foot">
+            <button type="button" class="btn-primary full" onclick="simpanReservasi()">Simpan Data</button>
+        </div>
     </form>
   </div>
 
-  <div id="editFormPopup" class="popup-form"></div>
-  <div id="menuManagementPopup" class="popup-form"></div>
-  <div id="locationManagementPopup" class="popup-form"></div>
-  <div id="customerListPopup" class="popup-form"></div>
-  <div id="analysisPopup" class="popup-form"></div>
-  
-  <div id="exportDataPopup" class="popup-form">
-    <h3><i class="fas fa-file-export"></i> Export Data ASCII</h3>
-    <textarea id="export-data-output" readonly style="height: 150px; font-family: monospace; width:100%;"></textarea>
-    <div class="popup-actions">
-        <button type="button" onclick="copyExportCode()"><i class="fas fa-copy"></i> Salin Kode</button>
-        <button type="button" class="btn-danger" onclick="closePopup('exportDataPopup')">Tutup</button>
-    </div>
+  <div id="editFormPopup" class="popup-glass"></div>
+  <div id="menuManagementPopup" class="popup-glass"></div>
+  <div id="locationManagementPopup" class="popup-glass"></div>
+  <div id="broadcastMainPopup" class="popup-glass"></div>
+  <div id="broadcastSettingsPopup" class="popup-glass"></div>
+  <div id="broadcastListPopup" class="popup-glass large"></div>
+  <div id="exportDataPopup" class="popup-glass">
+      <h3>Export Data</h3>
+      <textarea id="export-data-output" class="glass-input" rows="5"></textarea>
+      <div class="popup-foot"><button onclick="copyExportCode()" class="btn-primary">Salin</button><button onclick="closePopup('exportDataPopup')" class="btn-ghost">Tutup</button></div>
   </div>
-
-  <div id="printOptionsPopup" class="popup-form">
-    <h3><i class="fas fa-print"></i> Opsi Cetak</h3>
-    <div id="print-options-form">
-        <div class="print-options-grid">
-            <label><input type="checkbox" id="print-detail-menu" checked> Detail Menu</label>
-            <label><input type="checkbox" id="print-kontak" checked> Kontak (No. HP)</label>
-            <label><input type="checkbox" id="print-dp" checked> Info DP</label>
-            <label><input type="checkbox" id="print-tambahan" checked> Request Tambahan</label>
-        </div>
-        <div class="popup-actions">
-            <button type="button" onclick="executePrint()"><i class="fas fa-check"></i> Lanjutkan</button>
-            <button type="button" class="btn-danger" onclick="closePopup('printOptionsPopup')">Batal</button>
-        </div>
-    </div>
+  <div id="printOptionsPopup" class="popup-glass">
+      <h3>Opsi Cetak</h3>
+      <div id="print-options-form" class="check-grid">
+          <label><input type="checkbox" id="print-detail-menu" checked> Menu</label>
+          <label><input type="checkbox" id="print-kontak" checked> Kontak</label>
+          <label><input type="checkbox" id="print-dp" checked> DP</label>
+          <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
+      </div>
+      <div class="popup-foot"><button onclick="executePrint()" class="btn-primary">Print</button><button onclick="closePopup('printOptionsPopup')" class="btn-ghost">Batal</button></div>
   </div>
-
-  <div id="broadcastMainPopup" class="popup-form">
-    <h3><i class="fas fa-bullhorn"></i> Menu Broadcast Promo</h3>
-    <p>Kirimkan promosi ke semua pelanggan.</p>
-    <div class="popup-actions vertical">
-        <button type="button" class="btn-info" onclick="showBroadcastSettings()"><i class="fas fa-cog"></i> Atur Pesan</button>
-        <button type="button" class="btn-whatsapp" onclick="showBroadcastList()"><i class="fas fa-paper-plane"></i> Mulai Broadcast</button>
-        <button type="button" class="btn-danger" onclick="closePopup('broadcastMainPopup')">Tutup</button>
-    </div>
-  </div>
-
-  <div id="broadcastSettingsPopup" class="popup-form">
-    <h3><i class="fas fa-cog"></i> Atur Pesan Broadcast</h3>
-    <textarea id="broadcastMessage" placeholder="Tulis pesan promo di sini..." style="height: 150px; width:100%;"></textarea>
-    <div class="popup-actions">
-        <button type="button" onclick="saveBroadcastMessage()">Simpan</button>
-        <button type="button" class="btn-secondary" onclick="closePopup('broadcastSettingsPopup'); showBroadcastMain()">Kembali</button>
-    </div>
-  </div>
-
-  <div id="broadcastListPopup" class="popup-form" style="max-width: 700px;">
-    <h3><i class="fas fa-users"></i> Daftar Penerima</h3>
-    <input type="text" id="broadcastCustomerSearch" oninput="filterBroadcastCustomers(this.value)" placeholder="Cari..." style="width:100%; margin:10px 0; padding:10px;">
-    <div id="broadcast-customer-list" style="max-height: 40vh; overflow-y: auto;"></div>
-    <div class="popup-actions">
-        <button type="button" class="btn-danger" onclick="closePopup('broadcastListPopup')">Tutup</button>
-    </div>
-  </div>
+  <div id="customerListPopup" class="popup-glass"></div>
+  <div id="analysisPopup" class="popup-glass"></div>
 
   <script src="app.js"></script>
 </body>
