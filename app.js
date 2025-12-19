@@ -1232,12 +1232,11 @@ function handleAutoOpen() {
 }
 // ============================================================================
 // FILE: app.js
-// BAGIAN 4: MANAJEMEN CRUD RESERVASI (MANUAL & VALIDASI)
+// BAGIAN 4: MANAJEMEN CRUD RESERVASI (DIPERBAIKI: INPUT TANGGAL MANUAL)
 // ============================================================================
 
 /**
- * 19. TAMPILKAN FORM TAMBAH (RESET UI)
- * Menyiapkan popup formulir untuk input data baru.
+ * 19. TAMPILKAN FORM TAMBAH (RESET UI & SET TANGGAL)
  */
 function showAddForm() {
     const form = document.getElementById('reservation-form');
@@ -1248,11 +1247,20 @@ function showAddForm() {
     document.querySelectorAll('.err-msg').forEach(el => el.textContent = '');
     document.querySelectorAll('.glass-input').forEach(el => el.style.borderColor = '');
     
-    // Validasi UI: Pastikan tanggal sudah dipilih
-    // Jika belum (misal dari tombol Quick Action), default ke hari ini
-    if (!tanggalDipilih) {
+    // --- LOGIKA BARU: Set Nilai Tanggal di Input ---
+    const dateInput = document.getElementById('inputDate');
+    
+    if (tanggalDipilih) {
+        // Jika user sudah klik tanggal di kalender, gunakan itu
+        // Format tanggalDipilih saat ini adalah "MM-DD", kita butuh "YYYY-MM-DD"
+        dateInput.value = `${currentYear}-${tanggalDipilih}`;
+    } else {
+        // Jika belum pilih, default ke Hari Ini
         const now = new Date();
-        tanggalDipilih = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${y}-${m}-${d}`;
     }
 
     // Populate Dropdown Lokasi & Reset Kapasitas
@@ -1275,29 +1283,20 @@ function showAddForm() {
 
 /**
  * 20. TAMPILKAN FORM EDIT (INJECT HTML DINAMIS)
- * Mengambil data reservasi yang ada, membuat form edit on-the-fly.
+ * (Tidak ada perubahan logika, hanya memastikan fungsi ini tetap ada)
  */
 function editReservasi(id) {
-  // 1. Cari data reservasi di cache lokal
   let res = null;
-  // Loop semua tanggal karena ID unik
   for (const dateKey in dataReservasi) {
       const found = dataReservasi[dateKey].find(r => r.id === id);
-      if (found) { 
-          res = found; 
-          break; 
-      }
+      if (found) { res = found; break; }
   }
 
-  if (!res) { 
-      showToast("Data tidak ditemukan di cache (mungkin sudah dihapus).", "error"); 
-      return; 
-  }
+  if (!res) { return showToast("Data tidak ditemukan.", "error"); }
   
-  // 2. Siapkan Container Popup Edit
   const formContainer = document.getElementById('editFormPopup');
   
-  // Inject HTML Form Edit (Sesuai Style Luxury)
+  // Inject HTML Form Edit
   formContainer.innerHTML = `
     <div class="popup-header">
         <h3><i class="fas fa-edit"></i> Edit Data</h3>
@@ -1306,6 +1305,12 @@ function editReservasi(id) {
     <form id="edit-reservation-form" style="padding:25px;">
       <input type="hidden" id="editReservationId" value="${res.id}" />
       
+      <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="editDate" class="glass-input" value="${res.date}" readonly style="background:#eee; cursor:not-allowed;" />
+          <small style="color:#888;">(Tanggal tidak bisa diubah saat edit)</small>
+      </div>
+
       <div class="form-group">
           <label>Nama Pemesan</label>
           <input type="text" id="nama" class="glass-input" value="${escapeHtml(res.nama || '')}" required />
@@ -1379,44 +1384,41 @@ function editReservasi(id) {
   
   const editFormEl = document.getElementById('edit-reservation-form');
   
-  // 3. Set Nilai Awal Dropdown
-  const tipeDpSelect = editFormEl.querySelector('#tipeDp');
-  if(tipeDpSelect) tipeDpSelect.value = res.tipeDp || '';
-  
+  // Set Nilai Awal
+  editFormEl.querySelector('#tipeDp').value = res.tipeDp || '';
   const tempatSelect = editFormEl.querySelector('#tempat');
   populateLocationDropdown(tempatSelect, res.tempat);
   updateCapacityInfo('edit-reservation-form');
   
-  // 4. Populate Menu (Support Legacy String & New Array Object)
+  // Populate Menu
   const menuContainer = editFormEl.querySelector('#selected-menus-container');
   menuContainer.innerHTML = ''; 
-
   if (Array.isArray(res.menus) && res.menus.length > 0) {
     res.menus.forEach(item => {
         addMenuSelectionRow('edit-reservation-form', item.name, item.quantity);
     });
   } else if (res.menu) {
-    // Fallback data lama
     addMenuSelectionRow('edit-reservation-form', res.menu, 1);
   } else {
     addMenuSelectionRow('edit-reservation-form');
   }
   
-  // 5. Tampilkan Modal
   formContainer.style.display = 'block'; 
   overlay.style.display = 'block';
 }
 
 
 /**
- * 21. OPERASI DATABASE: TAMBAH (CREATE)
+ * 21. OPERASI DATABASE: TAMBAH (CREATE - LOGIKA BARU)
  */
 async function simpanReservasi() {
   const formData = await validateAndGetFormData('reservation-form');
-  if (!formData) return; // Stop jika tidak valid
+  if (!formData) return; 
   
-  if (!tanggalDipilih) { 
-      showToast("Pilih tanggal di kalender dulu!", "error");
+  // --- PERBAIKAN UTAMA: AMBIL TANGGAL DARI INPUT ---
+  const dateInput = document.getElementById('inputDate').value;
+  if (!dateInput) { 
+      showToast("Tanggal wajib diisi!", "error");
       return; 
   }
   
@@ -1424,7 +1426,7 @@ async function simpanReservasi() {
   try {
     const payload = { 
         ...formData, 
-        date: `${currentYear}-${tanggalDipilih}`, 
+        date: dateInput, // Gunakan nilai dari input date, bukan global state
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         thankYouSent: false
     };
@@ -1433,6 +1435,10 @@ async function simpanReservasi() {
     
     showToast("Reservasi berhasil disimpan!", "success");
     closePopup('addFormPopup'); 
+    
+    // Jika tanggal yang dipilih di form berbeda dengan view kalender saat ini,
+    // kita beri notifikasi kecil atau navigasi (opsional).
+    // Tapi data sudah pasti masuk ke tanggal yang benar di database.
     
   } catch (e) { 
     console.error("Save Error:", e);
@@ -1455,12 +1461,9 @@ async function simpanPerubahanReservasi() {
   
   showLoader();
   try {
-    // Update data (tanpa mengubah tanggal & createdAt agar tidak merusak urutan)
     await db.collection('reservations').doc(id).update(formData);
-    
     showToast("Perubahan berhasil disimpan.", "success");
     closePopup('editFormPopup');
-    
   } catch (e) { 
     console.error("Update Error:", e);
     showToast("Gagal mengupdate data.", "error"); 
@@ -1502,7 +1505,6 @@ async function hapusReservasi(id) {
 
 /**
  * 24. VALIDASI FORM & DATA EXTRACTION
- * Mengambil data dari form, membersihkan input, dan memvalidasi aturan bisnis.
  */
 async function validateAndGetFormData(formId) {
     const form = document.getElementById(formId);
@@ -1511,35 +1513,28 @@ async function validateAndGetFormData(formId) {
     const setError = (elementId, message) => { 
         const errEl = form.querySelector(`#${elementId}-error`);
         if(errEl) errEl.textContent = message; 
-        
         const inputEl = form.querySelector(`#${elementId}`);
         if(inputEl) inputEl.style.borderColor = 'var(--danger)';
-        
         isValid = false; 
     };
 
-    // Reset error styles
     form.querySelectorAll('.err-msg').forEach(el => el.textContent = '');
     form.querySelectorAll('.glass-input').forEach(el => el.style.borderColor = '');
 
-    // 1. Validasi Nama
     const namaInput = form.querySelector('#nama');
     const nama = namaInput.value.trim();
     if(!nama) setError('nama', 'Wajib diisi');
 
-    // 2. Validasi Nomor HP
     const hpInput = form.querySelector('#nomorHp');
     const nomorHp = cleanPhoneNumber(hpInput.value);
     if(hpInput.value.trim() !== '' && !isValidPhone(nomorHp)) {
         setError('nomorHp', 'Min 10 digit');
     }
 
-    // 3. Validasi Jam
     const jamInput = form.querySelector('#jam');
     const jam = jamInput.value;
     if(!jam) setError('jam', 'Wajib diisi');
 
-    // 4. Validasi Jumlah & Kapasitas Tempat
     const jumlahInput = form.querySelector('#jumlah');
     const jumlah = parseInt(jumlahInput.value);
     const tempatInput = form.querySelector('#tempat');
@@ -1550,7 +1545,6 @@ async function validateAndGetFormData(formId) {
     if(!tempat) {
         setError('tempat', 'Pilih tempat');
     } else {
-        // Cek Kapasitas
         const locationKey = Object.keys(locationsData).find(k => locationsData[k].name === tempat);
         if(locationKey) {
             const cap = locationsData[locationKey].capacity;
@@ -1561,7 +1555,6 @@ async function validateAndGetFormData(formId) {
         }
     }
 
-    // 5. Validasi & Ekstraksi Menu
     const menus = [];
     const menuRows = form.querySelectorAll('.menu-selection-row');
     const selectedItems = new Set();
@@ -1575,7 +1568,7 @@ async function validateAndGetFormData(formId) {
         
         if(mName && !isNaN(mQty) && mQty > 0) {
             if(selectedItems.has(mName)) {
-                setError('menus', 'Menu ganda. Gabungkan baris.');
+                setError('menus', 'Menu ganda.');
             } else {
                 selectedItems.add(mName);
                 menus.push({ name: mName, quantity: mQty });
@@ -1602,8 +1595,6 @@ async function validateAndGetFormData(formId) {
 /**
  * 25. HELPER UI FORM
  */
-
-// Menambah Baris Input Menu
 function addMenuSelectionRow(formId, defaultName='', defaultQty=1) {
   const container = document.querySelector(`#${formId} #selected-menus-container`);
   if (!container) return;
@@ -1614,7 +1605,6 @@ function addMenuSelectionRow(formId, defaultName='', defaultQty=1) {
   div.style.gap = '10px';
   div.style.marginBottom = '10px';
   
-  // Build Options
   const optionsHtml = Object.keys(detailMenu).sort().map(name => {
       const price = menuPrices[name] ? ` (Rp ${formatRupiah(menuPrices[name])})` : '';
       const selected = name === defaultName ? 'selected' : '';
@@ -1631,18 +1621,13 @@ function addMenuSelectionRow(formId, defaultName='', defaultQty=1) {
         <i class="fas fa-trash"></i>
     </button>
   `;
-  
   container.appendChild(div);
 }
 
-// Populate Dropdown Lokasi
 function populateLocationDropdown(selectElement, defaultValue='') {
     if(!selectElement) return;
-    
     selectElement.innerHTML = '<option value="">-- Pilih Lokasi --</option>';
-    
     const sortedLocs = Object.values(locationsData).sort((a,b) => a.name.localeCompare(b.name));
-    
     sortedLocs.forEach(loc => {
         const selected = loc.name === defaultValue ? 'selected' : '';
         const option = `<option value="${loc.name}" ${selected}>${escapeHtml(loc.name)} (Kap: ${loc.capacity})</option>`;
@@ -1650,26 +1635,19 @@ function populateLocationDropdown(selectElement, defaultValue='') {
     });
 }
 
-// Update Info Kapasitas
 function updateCapacityInfo(formId) {
     const form = document.getElementById(formId);
     const select = form.querySelector('#tempat');
     const infoSpan = form.querySelector('#capacity-info');
-    
     const val = select.value;
-    if(!val) {
-        infoSpan.textContent = '';
-        return;
-    }
-    
+    if(!val) { infoSpan.textContent = ''; return; }
     const locKey = Object.keys(locationsData).find(k => locationsData[k].name === val);
     if (locKey) {
         const cap = locationsData[locKey].capacity;
         infoSpan.innerHTML = `<i class="fas fa-info-circle"></i> Max: <b>${cap} orang</b>`;
-    } else {
-        infoSpan.textContent = '';
-    }
+    } else { infoSpan.textContent = ''; }
 }
+
 // ============================================================================
 // FILE: app.js
 // BAGIAN 5: MASTER DATA, BROADCAST, ANALISIS, SETTINGS & WA LOGIC (FIXED)
