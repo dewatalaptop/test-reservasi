@@ -47,10 +47,13 @@ let allReservationsList = []; // Flat list bulan aktif (Dashboard)
 let requestsCache = [];       // Inbox Request
 let allReservationsCache = null; // Cache Global untuk Analisis Bisnis (Lazy Load)
 
-// --- Cache Data Master (Sangat Penting untuk Detail Menu) ---
-let detailMenu = {};          // Format: { "Paket G": ["Nasi Putih", "Kakap Asam Manis", ...] }
-let menuPrices = {};          // Format: { "Paket G": 50000 }
-let locationsData = {};       // Format: { "lantai-1": {name: "Lantai 1", capacity: 50} }
+// --- Cache Data Master (Sangat Penting untuk Detail Menu & Print) ---
+// Format: { "Paket G": ["Nasi Putih", "Kakap Asam Manis", "Es Teh"] }
+let detailMenu = {};          
+// Format: { "Paket G": 50000 }
+let menuPrices = {};          
+// Format: { "lantai-1": {name: "Lantai 1", capacity: 50} }
+let locationsData = {};       
 
 // --- State Navigasi & Kalender ---
 let tanggalDipilih = '';      // Format "MM-DD"
@@ -91,7 +94,7 @@ auth.onAuthStateChanged(user => {
             appLayout.style.display = 'flex'; // Flex untuk struktur layout yang benar
             
             // --- FIX PENTING: Reset Tampilan ke Dashboard ---
-            // 1. Sembunyikan semua tab konten secara paksa
+            // 1. Sembunyikan semua tab konten secara paksa agar tidak menumpuk
             document.querySelectorAll('.content-section').forEach(el => {
                 el.classList.remove('active');
                 el.style.display = 'none'; 
@@ -100,7 +103,7 @@ auth.onAuthStateChanged(user => {
             // 2. Reset navigasi sidebar
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
-            // 3. Masuk ke Dashboard
+            // 3. Masuk ke Dashboard secara otomatis
             setTimeout(() => {
                 switchTab('dashboard');
             }, 100);
@@ -310,6 +313,7 @@ async function initializeApp() {
 
     // Load Data Master (Parallel) 
     // Kita WAJIB memuat Menu dan Lokasi sebelum data reservasi ditampilkan
+    // agar sistem bisa menampilkan detail paket menu dengan benar
     await Promise.all([
         loadMenus(),     
         loadLocations()  
@@ -330,7 +334,7 @@ async function initializeApp() {
 
   } catch (e) {
     console.error("Init Error:", e);
-    showToast("Gagal memuat data aplikasi. Silakan refresh.", "error");
+    showToast("Gagal memuat data. Silakan refresh.", "error");
     hideLoader();
   }
 }
@@ -1833,7 +1837,6 @@ function executePrint() {
         const showDp = document.getElementById('print-dp').checked;
         const showNote = document.getElementById('print-tambahan').checked;
 
-        // Sorting Data
         const sortedList = [...list].sort((a,b) => {
             const valA = (a[sortBy] || '').toString().toLowerCase();
             const valB = (b[sortBy] || '').toString().toLowerCase();
@@ -2072,7 +2075,6 @@ async function runUIAnalysis() {
     const aov = totalTrans > 0 ? Math.round(totalRevenue / totalTrans) : 0;
     
     // Perhitungan Cancel Rate (Simulasi jika ada flag 'status' = 'cancelled')
-    // Saat ini kita pakai dummy 0% karena belum ada flag cancel di DB
     const cancelRate = 0; 
 
     document.getElementById('stat-kpi-revenue').textContent = `Rp ${formatRupiah(totalRevenue)}`;
@@ -2368,7 +2370,7 @@ function escapeHtml(text) {
 
 function showToast(message, type = 'success') {
     let icon = type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
-    if (type === 'info') icon = '<i class="fas fa-info-circle"></i>';
+    if(type === 'info') icon = '<i class="fas fa-info-circle"></i>';
     
     toast.innerHTML = `${icon} &nbsp; ${message}`;
     toast.className = `toast ${type}`;
@@ -2386,8 +2388,8 @@ function hideLoader() { if (loadingOverlay) loadingOverlay.style.display = 'none
 
 function closePopup(popupId) {
     const popup = document.getElementById(popupId);
-    if (popup) popup.style.display = 'none';
-    if (overlay) overlay.style.display = 'none';
+    if(popup) popup.style.display = 'none';
+    if(overlay) overlay.style.display = 'none';
 }
 
 function forceSync() { 
@@ -2403,7 +2405,7 @@ function toggleNotificationDropdown(e) {
 
 window.addEventListener('click', () => { 
     const d = document.getElementById('notification-dropdown'); 
-    if (d) d.style.display = 'none'; 
+    if(d) d.style.display = 'none'; 
 });
 
 console.log("Dolan Sawah App Loaded: Ultimate Edition - Final V3 (Full Uncompressed).");
