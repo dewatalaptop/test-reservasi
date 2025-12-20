@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-  <meta name="theme-color" content="#059669"> 
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#059669"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
   <title>Dolan Sawah Manager - Ultimate Edition</title>
 
@@ -25,21 +24,21 @@
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* Background Tidak Blur */
+    /* Background Tidak Blur, Overlay Bening */
     .bg-overlay-glass {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
         background: rgba(0, 0, 0, 0.2) !important; 
     }
     
-    /* Hanya panel konten yang blur */
+    /* Hanya panel konten yang memiliki efek blur */
     .glass-panel, .glass-sidebar, .glass-header, .glass-card, .popup-glass, .glass-dropdown, .mobile-header {
         backdrop-filter: blur(20px) saturate(180%) !important;
         -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
         background: rgba(255, 255, 255, 0.85) !important;
     }
 
-    /* Mobile UX Tweaks */
+    /* MOBILE ADVANCE TWEAKS */
     @media (max-width: 768px) {
         .sidebar-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -49,6 +48,9 @@
         }
         .sidebar-overlay.active { display: block; opacity: 1; }
         
+        h2 { font-size: 1.5rem !important; }
+        h3 { font-size: 1.2rem !important; }
+        .btn-action, .stat-card { min-height: 100px; }
         #printOptionsPopup { width: 95% !important; max-height: 85vh; }
     }
   </style>
@@ -139,6 +141,15 @@
       </div>
 
       <div class="sidebar-footer">
+        <div class="user-profile-mini" style="margin-bottom:15px; display:flex; align-items:center; gap:10px; padding:10px; background:rgba(255,255,255,0.4); border-radius:12px;">
+            <div style="width:35px; height:35px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div style="line-height:1;">
+                <small style="display:block; font-weight:700; color:var(--text-main);">Admin</small>
+                <small style="font-size:0.7rem; color:var(--text-muted);">Manager Access</small>
+            </div>
+        </div>
         <button class="btn-logout" onclick="handleLogout()">
             <i class="fas fa-sign-out-alt"></i> Keluar
         </button>
@@ -339,28 +350,28 @@
                  <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--success);">
                      <div class="stat-icon green" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-money-bill-wave"></i></div>
                      <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">Est. Revenue (DP)</h4>
+                         <h4 style="font-size:0.8rem;">EST. REVENUE</h4>
                          <span class="value" id="stat-kpi-revenue" style="font-size:1.4rem;">Rp 0</span>
                      </div>
                  </div>
                  <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--info);">
                      <div class="stat-icon blue" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-users"></i></div>
                      <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">Total Pax</h4>
+                         <h4 style="font-size:0.8rem;">TOTAL PAX</h4>
                          <span class="value" id="stat-kpi-pax" style="font-size:1.4rem;">0</span>
                      </div>
                  </div>
                  <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--accent);">
                      <div class="stat-icon orange" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-shopping-basket"></i></div>
                      <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">Avg Order Value</h4>
+                         <h4 style="font-size:0.8rem;">AVG ORDER VALUE</h4>
                          <span class="value" id="stat-kpi-aov" style="font-size:1.4rem;">Rp 0</span>
                      </div>
                  </div>
                  <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--danger);">
                      <div class="stat-icon" style="color:var(--danger); background:#fee2e2; width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-ban"></i></div>
                      <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">Cancel Rate</h4>
+                         <h4 style="font-size:0.8rem;">CANCEL RATE</h4>
                          <span class="value" id="stat-kpi-cancel" style="font-size:1.4rem;">0%</span>
                      </div>
                  </div>
@@ -406,27 +417,6 @@
                              <tbody id="top-customer-table"></tbody>
                          </table>
                      </div>
-                 </div>
-             </div>
-
-             <div class="strategy-section" style="background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4)); padding: 25px; border-radius: 20px; border:1px dashed var(--primary);">
-                 <h3 style="margin-top:0; margin-bottom:20px; color:var(--primary);"><i class="fas fa-chess"></i> Strategic Business Tools</h3>
-                 <div class="tools-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                     <button class="btn-action" style="text-align:left; padding:15px; align-items:flex-start; height:auto;" onclick="showToast('Fitur Kalkulator HPP segera hadir!', 'info')">
-                         <i class="fas fa-calculator" style="color:var(--accent); font-size:1.5rem; margin-bottom:10px;"></i>
-                         <div style="font-weight:700;">Simulasi Laba/Rugi</div>
-                         <small style="color:var(--text-muted);">Hitung margin profit per paket.</small>
-                     </button>
-                     <button class="btn-action" style="text-align:left; padding:15px; align-items:flex-start; height:auto;" onclick="showToast('Analisis prediksi stok segera hadir!', 'info')">
-                         <i class="fas fa-boxes" style="color:var(--info); font-size:1.5rem; margin-bottom:10px;"></i>
-                         <div style="font-weight:700;">Prediksi Stok</div>
-                         <small style="color:var(--text-muted);">Estimasi bahan baku minggu depan.</small>
-                     </button>
-                     <button class="btn-action" style="text-align:left; padding:15px; align-items:flex-start; height:auto;" onclick="showToast('Export laporan CRM siap.', 'success')">
-                         <i class="fas fa-file-excel" style="color:var(--success); font-size:1.5rem; margin-bottom:10px;"></i>
-                         <div style="font-weight:700;">Export Report</div>
-                         <small style="color:var(--text-muted);">Unduh data lengkap Excel/PDF.</small>
-                     </button>
                  </div>
              </div>
         </div>
