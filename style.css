@@ -522,3 +522,46 @@ button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; 
       border-top: 1px dashed #ccc;
   }
 }
+/* ==========================================================================
+   FIX: PERBAIKAN TAMPILAN ANALISIS (MOBILE)
+   Letakkan kode ini di bagian paling bawah style.css
+   ========================================================================== */
+
+/* 1. Izinkan Judul KPI (misal: EST. REVENUE) untuk melipat ke baris baru */
+.kpi-grid .stat-info h4 {
+    white-space: normal !important; /* Mengizinkan text wrapping */
+    line-height: 1.2;               /* Jarak antar baris lebih rapat */
+    margin-bottom: 5px;             /* Jarak ke angka di bawahnya */
+    font-size: 0.85rem !important;  /* Ukuran font sedikit disesuaikan */
+}
+
+/* 2. Buat Nilai Angka (misal: Rp 1.000.0) Responsif */
+.kpi-grid .stat-info .value {
+    /* Gunakan 'clamp' agar font mengecil otomatis di HP sempit,
+       tapi tidak terlalu kecil, dan tidak terlalu besar di tablet */
+    font-size: clamp(1.1rem, 5vw, 1.4rem) !important;
+    line-height: 1.1;
+    display: block;
+    word-break: break-word; /* Jaga-jaga jika angka sangat panjang */
+}
+
+/* 3. Penyesuaian khusus untuk HP layar sempit (di bawah 400px) */
+@media (max-width: 400px) {
+    .kpi-grid .stat-card {
+        padding: 12px !important; /* Kurangi padding agar ruang teks lebih lega */
+        gap: 10px !important;     /* Rapatkan jarak ikon dan teks */
+    }
+    /* Perkecil sedikit ikon agar tidak makan tempat */
+    .kpi-grid .stat-icon {
+        width: 35px !important;
+        height: 35px !important;
+        font-size: 1rem !important;
+        margin-bottom: 0 !important; /* Hapus margin bawah di mode flex row */
+    }
+}
+
+/* 4. Pastikan container grafik tidak melebar keluar layar */
+.chart-container {
+    max-width: 100%;
+    overflow: hidden;
+}
