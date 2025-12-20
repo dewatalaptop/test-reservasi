@@ -2,9 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-  <meta name="theme-color" content="#059669"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Dolan Sawah Manager - Ultimate Edition</title>
 
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -22,38 +20,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
   <link rel="stylesheet" href="style.css">
-
-  <style>
-    /* Background Tidak Blur, Overlay Bening */
-    .bg-overlay-glass {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        background: rgba(0, 0, 0, 0.2) !important; 
-    }
-    
-    /* Hanya panel konten yang memiliki efek blur */
-    .glass-panel, .glass-sidebar, .glass-header, .glass-card, .popup-glass, .glass-dropdown, .mobile-header {
-        backdrop-filter: blur(20px) saturate(180%) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-        background: rgba(255, 255, 255, 0.85) !important;
-    }
-
-    /* MOBILE ADVANCE TWEAKS */
-    @media (max-width: 768px) {
-        .sidebar-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 999;
-            display: none; opacity: 0; transition: opacity 0.3s;
-            backdrop-filter: blur(4px);
-        }
-        .sidebar-overlay.active { display: block; opacity: 1; }
-        
-        h2 { font-size: 1.5rem !important; }
-        h3 { font-size: 1.2rem !important; }
-        .btn-action, .stat-card { min-height: 100px; }
-        #printOptionsPopup { width: 95% !important; max-height: 85vh; }
-    }
-  </style>
 </head>
 <body>
 
@@ -84,18 +50,12 @@
 
   <div id="app-layout" style="display:none;">
     
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-
     <div class="mobile-header glass-header">
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <button id="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div style="line-height: 1.1;">
-                <span class="header-brand" style="display:block; font-size:1.1rem;">Dolan Sawah</span>
-                <small style="font-size:0.75rem; color:var(--text-muted);" id="mobile-date-display">System Manager</small>
-            </div>
-        </div>
+        <button id="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <span class="header-brand">Dolan Sawah</span>
         
         <div class="header-actions-mobile">
             <div class="notif-icon" onclick="toggleNotificationDropdown(event)">
@@ -107,12 +67,7 @@
 
     <div class="sidebar glass-sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
-        </div>
-        <button class="close-sidebar-mobile" onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; display:none;">
-            <i class="fas fa-times"></i>
-        </button>
+        <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
       </div>
       
       <div class="nav-menu">
@@ -141,15 +96,6 @@
       </div>
 
       <div class="sidebar-footer">
-        <div class="user-profile-mini" style="margin-bottom:15px; display:flex; align-items:center; gap:10px; padding:10px; background:rgba(255,255,255,0.4); border-radius:12px;">
-            <div style="width:35px; height:35px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
-                <i class="fas fa-user-shield"></i>
-            </div>
-            <div style="line-height:1;">
-                <small style="display:block; font-weight:700; color:var(--text-main);">Admin</small>
-                <small style="font-size:0.7rem; color:var(--text-muted);">Manager Access</small>
-            </div>
-        </div>
         <button class="btn-logout" onclick="handleLogout()">
             <i class="fas fa-sign-out-alt"></i> Keluar
         </button>
@@ -277,7 +223,7 @@
                         </div>
 
                         <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Laporan WA"><i class="fab fa-whatsapp"></i></button>
-                        <button class="btn-icon" onclick="printData()" title="Print Laporan"><i class="fas fa-print"></i></button>
+                        <button class="btn-icon" onclick="printData()" title="Print"><i class="fas fa-print"></i></button>
                         <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
@@ -331,115 +277,60 @@
 
       <div id="tab-analysis" class="content-section">
         <div class="glass-panel" style="padding: 25px;">
-             <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:10px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:15px;">
-                <div>
-                    <h3 style="margin:0; font-size:1.4rem;"><i class="fas fa-chart-pie" style="color:var(--primary);"></i> Business Intelligence</h3>
-                    <small style="color:var(--text-muted);">Pantau kesehatan bisnis dan performa reservasi.</small>
-                </div>
+             <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0;"><i class="fas fa-chart-line"></i> Analisis Performa</h3>
                 <div style="display:flex; gap:10px;">
                     <select id="anl-month-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
                         <option value="all">Semua Bulan</option>
-                    </select>
+                        </select>
                     <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
-                    </select>
+                        </select>
                     <button class="btn-primary" onclick="runUIAnalysis()" style="width:auto;"><i class="fas fa-sync"></i></button>
                 </div>
              </div>
 
-             <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--success);">
-                     <div class="stat-icon green" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-money-bill-wave"></i></div>
-                     <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">Est. Revenue (DP)</h4>
-                         <span class="value" id="stat-kpi-revenue" style="font-size:1.4rem;">Rp 0</span>
-                     </div>
-                 </div>
-                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--info);">
-                     <div class="stat-icon blue" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-users"></i></div>
-                     <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">Total Pax</h4>
-                         <span class="value" id="stat-kpi-pax" style="font-size:1.4rem;">0</span>
-                     </div>
-                 </div>
-                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--accent);">
-                     <div class="stat-icon orange" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-shopping-basket"></i></div>
-                     <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">Avg Order Value</h4>
-                         <span class="value" id="stat-kpi-aov" style="font-size:1.4rem;">Rp 0</span>
-                     </div>
-                 </div>
-                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--danger);">
-                     <div class="stat-icon" style="color:var(--danger); background:#fee2e2; width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-ban"></i></div>
-                     <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">Cancel Rate</h4>
-                         <span class="value" id="stat-kpi-cancel" style="font-size:1.4rem;">0%</span>
-                     </div>
-                 </div>
-             </div>
-
-             <div class="charts-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
-                 <div style="background:rgba(255,255,255,0.6); padding:20px; border-radius:16px; border:1px solid rgba(0,0,0,0.05);">
-                     <h4 style="margin-top:0; color:var(--text-main); font-size:1rem; margin-bottom:15px;"><i class="fas fa-chart-area"></i> Tren Kunjungan</h4>
-                     <div class="chart-container" style="height: 300px; position:relative;">
+             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                 <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:16px;">
+                     <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Tren Kunjungan</h4>
+                     <div class="chart-container" style="height: 300px;">
                          <canvas id="mainChart"></canvas>
                      </div>
                  </div>
                  
-                 <div style="background:rgba(255,255,255,0.6); padding:20px; border-radius:16px; border:1px solid rgba(0,0,0,0.05);">
-                     <h4 style="margin-top:0; color:var(--text-main); font-size:1rem; margin-bottom:15px;"><i class="far fa-clock"></i> Jam Sibuk (Peak Hours)</h4>
-                     <div class="chart-container" style="height: 300px; position:relative;">
+                 <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:16px;">
+                     <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Jam Sibuk (Peak Hours)</h4>
+                     <div class="chart-container" style="height: 300px;">
                          <canvas id="hoursChart"></canvas>
                      </div>
                  </div>
              </div>
 
-             <div class="charts-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 30px;">
+             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
                  <div class="glass-card" style="padding:20px;">
-                     <h4 style="margin-top:0; margin-bottom:15px;"><i class="fas fa-utensils"></i> Menu Terlaris (Top 5)</h4>
+                     <h4 style="margin-top:0;"><i class="fas fa-utensils"></i> Menu Terlaris</h4>
                      <div class="chart-container" style="height: 250px; position:relative;">
                          <canvas id="menuChart"></canvas>
                      </div>
                  </div>
 
-                 <div class="glass-card" style="padding:20px; overflow:hidden; display:flex; flex-direction:column;">
-                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h4 style="margin:0;"><i class="fas fa-crown" style="color:gold;"></i> Top Pelanggan Setia</h4>
-                        <span class="pill" style="background:var(--primary-gradient); color:white;">CRM</span>
-                     </div>
-                     <div style="overflow-y:auto; flex:1;">
+                 <div class="glass-card" style="padding:20px; overflow:hidden;">
+                     <h4 style="margin-top:0;"><i class="fas fa-crown" style="color:gold;"></i> Top Pelanggan Setia</h4>
+                     <div style="overflow-y:auto; max-height:250px;">
                          <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
                              <thead>
-                                 <tr style="background:rgba(0,0,0,0.03); color:var(--text-muted); border-bottom:2px solid #eee;">
-                                     <th style="padding:10px; text-align:left;">Nama Pelanggan</th>
-                                     <th style="padding:10px; text-align:center;">Kunjungan</th>
+                                 <tr style="background:rgba(0,0,0,0.03); color:var(--text-muted);">
+                                     <th style="padding:8px; text-align:left;">Nama</th>
+                                     <th style="padding:8px; text-align:center;">Kunjungan</th>
                                  </tr>
                              </thead>
-                             <tbody id="top-customer-table"></tbody>
+                             <tbody id="top-customer-table">
+                                 </tbody>
                          </table>
                      </div>
                  </div>
              </div>
 
-             <div class="strategy-section" style="background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.4)); padding: 25px; border-radius: 20px; border:1px dashed var(--primary);">
-                 <h3 style="margin-top:0; margin-bottom:20px; color:var(--primary);"><i class="fas fa-chess"></i> Strategic Business Tools</h3>
-                 <div class="tools-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                     <button class="btn-action" style="text-align:left; padding:15px; align-items:flex-start; height:auto;" onclick="showToast('Fitur Kalkulator HPP segera hadir!', 'info')">
-                         <i class="fas fa-calculator" style="color:var(--accent); font-size:1.5rem; margin-bottom:10px;"></i>
-                         <div style="font-weight:700;">Simulasi Laba/Rugi</div>
-                         <small style="color:var(--text-muted);">Hitung margin profit per paket.</small>
-                     </button>
-                     <button class="btn-action" style="text-align:left; padding:15px; align-items:flex-start; height:auto;" onclick="showToast('Analisis prediksi stok segera hadir!', 'info')">
-                         <i class="fas fa-boxes" style="color:var(--info); font-size:1.5rem; margin-bottom:10px;"></i>
-                         <div style="font-weight:700;">Prediksi Stok</div>
-                         <small style="color:var(--text-muted);">Estimasi bahan baku minggu depan.</small>
-                     </button>
-                     <button class="btn-action" style="text-align:left; padding:15px; align-items:flex-start; height:auto;" onclick="showToast('Export laporan CRM siap.', 'success')">
-                         <i class="fas fa-file-excel" style="color:var(--success); font-size:1.5rem; margin-bottom:10px;"></i>
-                         <div style="font-weight:700;">Export Report</div>
-                         <small style="color:var(--text-muted);">Unduh data lengkap Excel/PDF.</small>
-                     </button>
-                 </div>
-             </div>
+             <div id="quick-insights" class="insights-row" style="margin-top:25px;"></div>
         </div>
       </div>
 
@@ -590,50 +481,17 @@
   </div>
 
   <div id="printOptionsPopup" class="popup-glass">
-    <div class="popup-header" style="padding: 20px; background: linear-gradient(135deg, var(--primary), #3b82f6); color: white;">
-        <h3 style="margin:0;"><i class="fas fa-print"></i> Cetak Laporan</h3>
-    </div>
-    <div style="padding:25px;">
-        <p style="margin-bottom:20px; color:var(--text-muted); font-size:0.9rem;">Sesuaikan tampilan laporan yang akan dicetak.</p>
-        
-        <div style="margin-bottom:20px;">
-            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">1. Format Tampilan</label>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <label class="radio-box" style="border:1px solid #ccc; padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                    <input type="radio" name="printFormat" value="cards" checked> 
-                    <span><i class="fas fa-th-large" style="color:var(--primary);"></i> Kartu (Visual)</span>
-                </label>
-                <label class="radio-box" style="border:1px solid #ccc; padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px;">
-                    <input type="radio" name="printFormat" value="table"> 
-                    <span><i class="fas fa-table" style="color:var(--primary);"></i> Tabel (Ringkas)</span>
-                </label>
-            </div>
+    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Cetak Laporan</h3></div>
+    <div style="padding:20px;">
+        <div id="print-options-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
+            <label><input type="checkbox" id="print-detail-menu" checked> Rincian Menu</label>
+            <label><input type="checkbox" id="print-kontak" checked> Kontak</label>
+            <label><input type="checkbox" id="print-dp" checked> Info DP</label>
+            <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
         </div>
-
-        <div style="margin-bottom:20px;">
-            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">2. Urutan Data</label>
-            <select id="print-sort-by" class="glass-input">
-                <option value="time">Urut Waktu (Pagi - Malam)</option>
-                <option value="name">Urut Nama (A - Z)</option>
-                <option value="location">Urut Tempat</option>
-            </select>
-        </div>
-
-        <div style="margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:10px;">
-            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">3. Opsi Detail</label>
-            <div id="print-options-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <label><input type="checkbox" id="print-detail-menu" checked> Rincian Menu</label>
-                <label><input type="checkbox" id="print-kontak" checked> Kontak HP</label>
-                <label><input type="checkbox" id="print-dp" checked> Info DP</label>
-                <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
-            </div>
-        </div>
-
-        <div class="popup-foot" style="text-align:right; border-top:1px solid #eee; padding-top:15px;">
-            <button onclick="closePopup('printOptionsPopup')" class="btn-action" style="width:auto; margin-right:10px;">Batal</button>
-            <button onclick="executePrint()" class="btn-primary" style="width:auto;">
-                <i class="fas fa-print"></i> Print Preview
-            </button>
+        <div class="popup-foot" style="text-align:right;">
+            <button onclick="executePrint()" class="btn-primary">Print Preview</button>
+            <button onclick="closePopup('printOptionsPopup')" class="btn-action" style="width:auto;">Batal</button>
         </div>
     </div>
   </div>
