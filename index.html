@@ -3,8 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Dolan Sawah Manager - Ultimate Edition</title>
+  <title>Dolan Sawah - Mode Diagnosa</title>
 
+  <script>
+    (function() {
+        // Membuat wadah log eror visual
+        var logBox = document.createElement('div');
+        logBox.id = 'error-console';
+        logBox.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); color:#00ff00; font-family:monospace; font-size:12px; z-index:99999; padding:20px; overflow:auto; white-space:pre-wrap; box-sizing:border-box;';
+        
+        var closeBtn = document.createElement('button');
+        closeBtn.innerHTML = "X TUTUP LOG";
+        closeBtn.style.cssText = "position:fixed; top:10px; right:10px; background:red; color:white; border:1px solid white; padding:5px 10px; z-index:100000; font-weight:bold;";
+        closeBtn.onclick = function() { logBox.style.display = 'none'; };
+
+        function showLog(type, msg, details) {
+            if(logBox.style.display === 'none') {
+                document.body.appendChild(logBox);
+                document.body.appendChild(closeBtn);
+                logBox.style.display = 'block';
+                logBox.innerHTML += "<h2 style='color:white; border-bottom:1px solid #333; padding-bottom:10px;'>LAPORAN EROR (Kirim ini ke AI):</h2>";
+            }
+            var time = new Date().toLocaleTimeString();
+            var color = type.includes('ERROR') ? '#ff4444' : '#00ff00';
+            var html = `<div style="margin-bottom:15px; border-bottom:1px dashed #333; padding-bottom:5px;">
+                <span style="color:#888">[${time}]</span> <strong style="color:${color}">[${type}]</strong><br>
+                <span style="color:white; font-weight:bold;">${msg}</span><br>
+                <span style="color:#aaa; font-size:11px;">${details || ''}</span>
+            </div>`;
+            logBox.innerHTML += html;
+        }
+
+        // 1. Tangkap Eror Javascript Biasa (Syntax/Runtime)
+        window.onerror = function(msg, url, line, col, error) {
+            var stack = error ? error.stack : 'N/A';
+            showLog('CRITICAL JS ERROR', msg, `Lokasi: ${url}\nBaris: ${line}:${col}\nStack: ${stack}`);
+            return false;
+        };
+
+        // 2. Tangkap Eror Promise (Firebase/Network)
+        window.onunhandledrejection = function(event) {
+            var reason = event.reason;
+            var msg = reason ? (reason.message || reason) : 'Unknown Promise Error';
+            var stack = reason ? reason.stack : 'N/A';
+            showLog('FIREBASE/NETWORK ERROR', msg, `Stack: ${stack}`);
+        };
+
+        // 3. Tangkap Console.Error (Logika Aplikasi)
+        var oldError = console.error;
+        console.error = function() {
+            var args = Array.from(arguments);
+            var msg = args.join(' ');
+            showLog('CONSOLE ERROR', msg, 'Terjadi di console aplikasi');
+            oldError.apply(console, args);
+        };
+        
+        console.log("Debugger Aktif. Jika tidak ada layar hitam, berarti aman.");
+    })();
+  </script>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -32,7 +88,7 @@
         <i class="fas fa-leaf"></i>
       </div>
       <h2>Dolan Sawah</h2>
-      <p>Management System</p>
+      <p>Management System (Debug Mode)</p>
       
       <div class="input-group">
         <i class="fas fa-envelope"></i>
@@ -51,12 +107,15 @@
   <div id="app-layout" style="display:none;">
     
     <div class="mobile-header glass-header">
-        <button id="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
-            <i class="fas fa-bars"></i>
-        </button>
-        
-        <span class="header-brand">Dolan Sawah</span>
-        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button id="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="line-height: 1.1;">
+                <span class="header-brand" style="display:block; font-size:1.1rem;">Dolan Sawah</span>
+                <small style="font-size:0.75rem; color:var(--text-muted);" id="mobile-date-display">System Manager</small>
+            </div>
+        </div>
         <div class="header-actions-mobile">
             <div class="notif-icon" onclick="toggleNotificationDropdown(event)">
                 <i class="far fa-bell"></i>
@@ -67,38 +126,26 @@
 
     <div class="sidebar glass-sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
+        </div>
+        <button class="close-sidebar-mobile" onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; display:none;">
+            <i class="fas fa-times"></i>
+        </button>
       </div>
       
       <div class="nav-menu">
-        <div class="nav-item active" onclick="switchTab('dashboard')">
-          <i class="fas fa-th-large"></i> Dashboard
-        </div>
-        <div class="nav-item" onclick="switchTab('inbox')">
-          <i class="fas fa-inbox"></i> Inbox Request
-          <span class="badge" id="sidebar-badge" style="display:none;">0</span>
-        </div>
-        <div class="nav-item" onclick="switchTab('calendar')">
-          <i class="far fa-calendar-alt"></i> Kalender Utama
-        </div>
-        <div class="nav-item" onclick="switchTab('data')">
-          <i class="fas fa-database"></i> Data Master
-        </div>
-        <div class="nav-item" onclick="switchTab('broadcast')">
-          <i class="fab fa-whatsapp"></i> Broadcast WA
-        </div>
-        <div class="nav-item" onclick="switchTab('analysis')">
-          <i class="fas fa-chart-line"></i> Analisis Bisnis
-        </div>
-        <div class="nav-item" onclick="switchTab('settings')">
-          <i class="fas fa-cog"></i> Pengaturan
-        </div>
+        <div class="nav-item active" onclick="switchTab('dashboard')"><i class="fas fa-th-large"></i> Dashboard</div>
+        <div class="nav-item" onclick="switchTab('inbox')"><i class="fas fa-inbox"></i> Inbox Request <span class="badge" id="sidebar-badge" style="display:none;">0</span></div>
+        <div class="nav-item" onclick="switchTab('calendar')"><i class="far fa-calendar-alt"></i> Kalender Utama</div>
+        <div class="nav-item" onclick="switchTab('data')"><i class="fas fa-database"></i> Data Master</div>
+        <div class="nav-item" onclick="switchTab('broadcast')"><i class="fab fa-whatsapp"></i> Broadcast WA</div>
+        <div class="nav-item" onclick="switchTab('analysis')"><i class="fas fa-chart-line"></i> Analisis Bisnis</div>
+        <div class="nav-item" onclick="switchTab('settings')"><i class="fas fa-cog"></i> Pengaturan</div>
       </div>
 
       <div class="sidebar-footer">
-        <button class="btn-logout" onclick="handleLogout()">
-            <i class="fas fa-sign-out-alt"></i> Keluar
-        </button>
+        <button class="btn-logout" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Keluar</button>
       </div>
     </div>
 
@@ -113,12 +160,8 @@
             <div id="notification-bell-container" class="icon-btn" onclick="toggleNotificationDropdown(event)">
                 <i class="far fa-bell"></i>
                 <span id="notification-badge" class="badge-count" style="display: none;">0</span>
-                
                 <div id="notification-dropdown" class="notification-dropdown glass-dropdown">
-                  <div class="dropdown-head">
-                      Pengingat "Say Thanks"
-                      <button onclick="runNotificationCheck()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem;"><i class="fas fa-sync"></i></button>
-                  </div>
+                  <div class="dropdown-head">Pengingat "Say Thanks"<button onclick="runNotificationCheck()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fas fa-sync"></i></button></div>
                   <ul id="notification-list-ul"></ul>
                 </div>
             </div>
@@ -127,112 +170,61 @@
 
       <div id="tab-dashboard" class="content-section active">
         <div class="stats-grid">
-            <div class="stat-card glass-panel">
-              <div class="stat-icon blue"><i class="fas fa-users"></i></div>
-              <div class="stat-info">
-                  <h4>Tamu Hari Ini</h4>
-                  <span class="value" id="stat-today-count">0</span>
-              </div>
-            </div>
-            <div class="stat-card glass-panel clickable" onclick="switchTab('inbox')">
-              <div class="stat-icon orange"><i class="fas fa-inbox"></i></div>
-              <div class="stat-info">
-                  <h4>Pending Request</h4>
-                  <span class="value" id="stat-pending-count">0</span>
-              </div>
-            </div>
-            <div class="stat-card glass-panel">
-              <div class="stat-icon green"><i class="fas fa-wallet"></i></div>
-              <div class="stat-info">
-                  <h4>Omzet DP (Bulan)</h4>
-                  <span class="value" id="stat-revenue-month">Rp 0</span>
-              </div>
-            </div>
+            <div class="stat-card glass-panel"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-info"><h4>Tamu Hari Ini</h4><span class="value" id="stat-today-count">0</span></div></div>
+            <div class="stat-card glass-panel clickable" onclick="switchTab('inbox')"><div class="stat-icon orange"><i class="fas fa-inbox"></i></div><div class="stat-info"><h4>Pending Request</h4><span class="value" id="stat-pending-count">0</span></div></div>
+            <div class="stat-card glass-panel"><div class="stat-icon green"><i class="fas fa-wallet"></i></div><div class="stat-info"><h4>Omzet DP (Bulan)</h4><span class="value" id="stat-revenue-month">Rp 0</span></div></div>
         </div>
-
         <div class="dashboard-split">
             <div class="glass-panel card-box">
-                <div class="card-header">
-                    <h3><i class="fas fa-clock"></i> Reservasi Terbaru</h3>
-                </div>
-                <div id="dashboard-recent-list" class="list-container">
-                    <p class="text-center loading-text">Memuat data...</p>
-                </div>
+                <div class="card-header"><h3><i class="fas fa-clock"></i> Reservasi Terbaru</h3></div>
+                <div id="dashboard-recent-list" class="list-container"><p class="text-center loading-text">Memuat data...</p></div>
             </div>
             <div class="glass-panel card-box">
-                <div class="card-header">
-                    <h3><i class="fas fa-bolt"></i> Menu Cepat</h3>
-                </div>
+                <div class="card-header"><h3><i class="fas fa-bolt"></i> Menu Cepat</h3></div>
                 <div class="quick-actions-grid">
-                    <button class="btn-action" onclick="showAddForm()">
-                        <i class="fas fa-plus-circle"></i> Input Manual
-                    </button>
-                    <button class="btn-action" onclick="switchTab('inbox')">
-                        <i class="fas fa-check-double"></i> Cek Inbox
-                    </button>
-                    <button class="btn-action" onclick="showBroadcastMain()">
-                        <i class="fab fa-whatsapp"></i> Promo WA
-                    </button>
-                    <button class="btn-action" onclick="forceSync()">
-                        <i class="fas fa-sync-alt"></i> Refresh App
-                    </button>
+                    <button class="btn-action" onclick="showAddForm()"><i class="fas fa-plus-circle"></i> Input Manual</button>
+                    <button class="btn-action" onclick="switchTab('inbox')"><i class="fas fa-check-double"></i> Cek Inbox</button>
+                    <button class="btn-action" onclick="showBroadcastMain()"><i class="fab fa-whatsapp"></i> Promo WA</button>
+                    <button class="btn-action" onclick="forceSync()"><i class="fas fa-sync-alt"></i> Refresh App</button>
                 </div>
             </div>
         </div>
       </div>
 
       <div id="tab-inbox" class="content-section">
-        <div class="section-tools" style="margin-bottom: 20px;">
-            <button class="btn-primary" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Inbox</button>
-        </div>
+        <div class="section-tools" style="margin-bottom: 20px;"><button class="btn-primary" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Inbox</button></div>
         <div id="inbox-container" class="grid-cards"></div>
       </div>
 
       <div id="tab-calendar" class="content-section">
         <div class="glass-panel calendar-wrapper">
             <div class="calendar-header-custom">
-                <div class="cal-nav-group">
-                    <button onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button>
-                    <div class="month-label" id="monthYear">...</div>
-                    <button onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
-                </div>
+                <div class="cal-nav-group"><button onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button><div class="month-label" id="monthYear">...</div><button onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button></div>
                 <button class="btn-today" onclick="goToToday()">Hari Ini</button>
             </div>
-            
-            <div class="calendar-weekdays">
-                <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
-            </div>
+            <div class="calendar-weekdays"><div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div></div>
             <div class="calendar-days" id="calendar"></div> 
         </div>
-
         <div id="reservation-view-container" style="display: none;">
             <div class="glass-panel detail-card">
                 <div class="detail-header">
                     <h3 id="reservation-view-title">Detail Reservasi</h3>
-                    
                     <div class="detail-actions">
-                        <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru"><i class="fas fa-plus"></i></button>
-                        
+                        <button class="btn-icon primary" onclick="showAddForm()"><i class="fas fa-plus"></i></button>
                         <div class="dropdown-wrapper" style="position:relative; display:inline-block;">
-                            <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan"><i class="fas fa-sort-amount-down"></i></button>
+                            <button class="btn-icon info" onclick="toggleSortDropdown()"><i class="fas fa-sort-amount-down"></i></button>
                             <div id="sort-dropdown" class="glass-dropdown" style="display:none; position:absolute; right:0; top:45px; width:150px; z-index:50;">
                                 <div class="notification-item" onclick="applySort('jam')"><i class="far fa-clock"></i> Waktu</div>
                                 <div class="notification-item" onclick="applySort('tempat')"><i class="fas fa-map-marker-alt"></i> Tempat</div>
                                 <div class="notification-item" onclick="applySort('nama')"><i class="fas fa-font"></i> Nama</div>
                             </div>
                         </div>
-
-                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Laporan WA"><i class="fab fa-whatsapp"></i></button>
-                        <button class="btn-icon" onclick="printData()" title="Print"><i class="fas fa-print"></i></button>
-                        <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup"><i class="fas fa-times"></i></button>
+                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')"><i class="fab fa-whatsapp"></i></button>
+                        <button class="btn-icon" onclick="printData()"><i class="fas fa-print"></i></button>
+                        <button class="btn-icon danger" onclick="kembaliKeKalender()"><i class="fas fa-times"></i></button>
                     </div>
                 </div>
-                
-                <div class="search-wrapper">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari nama, tempat..." class="glass-input">
-                </div>
-
+                <div class="search-wrapper"><i class="fas fa-search"></i><input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari nama, tempat..." class="glass-input"></div>
                 <div id="reservation-detail-list" class="detail-list"></div>
             </div>
         </div>
@@ -277,91 +269,41 @@
 
       <div id="tab-analysis" class="content-section">
         <div class="glass-panel" style="padding: 25px;">
-             <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
-                <h3 style="margin:0;"><i class="fas fa-chart-line"></i> Analisis Performa</h3>
+             <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:10px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:15px;">
+                <div><h3 style="margin:0; font-size:1.4rem;"><i class="fas fa-chart-pie" style="color:var(--primary);"></i> Business Intelligence</h3></div>
                 <div style="display:flex; gap:10px;">
-                    <select id="anl-month-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
-                        <option value="all">Semua Bulan</option>
-                        </select>
-                    <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
-                        </select>
+                    <select id="anl-month-ui" onchange="runUIAnalysis()" class="glass-input" style="width:auto; cursor:pointer;"><option value="all">Semua Bulan</option></select>
+                    <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width:auto; cursor:pointer;"></select>
                     <button class="btn-primary" onclick="runUIAnalysis()" style="width:auto;"><i class="fas fa-sync"></i></button>
                 </div>
              </div>
-
-             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
-                 <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:16px;">
-                     <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Tren Kunjungan</h4>
-                     <div class="chart-container" style="height: 300px;">
-                         <canvas id="mainChart"></canvas>
-                     </div>
-                 </div>
-                 
-                 <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:16px;">
-                     <h4 style="margin-top:0; color:var(--text-muted); font-size:0.9rem;">Jam Sibuk (Peak Hours)</h4>
-                     <div class="chart-container" style="height: 300px;">
-                         <canvas id="hoursChart"></canvas>
-                     </div>
-                 </div>
+             <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--success);"><div class="stat-info"><h4 style="font-size:0.8rem;">Est. Revenue</h4><span class="value" id="stat-kpi-revenue">Rp 0</span></div></div>
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--info);"><div class="stat-info"><h4 style="font-size:0.8rem;">Total Pax</h4><span class="value" id="stat-kpi-pax">0</span></div></div>
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--accent);"><div class="stat-info"><h4 style="font-size:0.8rem;">Avg Order Value</h4><span class="value" id="stat-kpi-aov">Rp 0</span></div></div>
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--danger);"><div class="stat-info"><h4 style="font-size:0.8rem;">Cancel Rate</h4><span class="value" id="stat-kpi-cancel">0%</span></div></div>
              </div>
-
-             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
-                 <div class="glass-card" style="padding:20px;">
-                     <h4 style="margin-top:0;"><i class="fas fa-utensils"></i> Menu Terlaris</h4>
-                     <div class="chart-container" style="height: 250px; position:relative;">
-                         <canvas id="menuChart"></canvas>
-                     </div>
-                 </div>
-
-                 <div class="glass-card" style="padding:20px; overflow:hidden;">
-                     <h4 style="margin-top:0;"><i class="fas fa-crown" style="color:gold;"></i> Top Pelanggan Setia</h4>
-                     <div style="overflow-y:auto; max-height:250px;">
-                         <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                             <thead>
-                                 <tr style="background:rgba(0,0,0,0.03); color:var(--text-muted);">
-                                     <th style="padding:8px; text-align:left;">Nama</th>
-                                     <th style="padding:8px; text-align:center;">Kunjungan</th>
-                                 </tr>
-                             </thead>
-                             <tbody id="top-customer-table">
-                                 </tbody>
-                         </table>
-                     </div>
-                 </div>
+             <div class="charts-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                 <div style="background:rgba(255,255,255,0.6); padding:20px; border-radius:16px;"><h4 style="margin-top:0;">Tren Kunjungan</h4><div class="chart-container" style="height:300px;"><canvas id="mainChart"></canvas></div></div>
+                 <div style="background:rgba(255,255,255,0.6); padding:20px; border-radius:16px;"><h4 style="margin-top:0;">Jam Sibuk</h4><div class="chart-container" style="height:300px;"><canvas id="hoursChart"></canvas></div></div>
              </div>
-
-             <div id="quick-insights" class="insights-row" style="margin-top:25px;"></div>
+             <div class="charts-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                 <div class="glass-card" style="padding:20px;"><h4 style="margin-top:0;">Menu Terlaris</h4><div class="chart-container" style="height:250px;"><canvas id="menuChart"></canvas></div></div>
+                 <div class="glass-card" style="padding:20px;"><h4 style="margin-top:0;">Top Pelanggan</h4><div style="overflow-y:auto; height:250px;"><table style="width:100%;"><thead><tr><th>Nama</th><th>Kunjungan</th></tr></thead><tbody id="top-customer-table"></tbody></table></div></div>
+             </div>
         </div>
       </div>
 
       <div id="tab-settings" class="content-section">
           <div class="glass-panel">
-              <div class="card-header">
-                  <h3><i class="fas fa-image"></i> Tampilan Background</h3>
-              </div>
+              <div class="card-header"><h3><i class="fas fa-image"></i> Background</h3></div>
               <div style="padding: 20px;">
-                  <p>Ganti background aplikasi sesuai suasana hati Anda.</p>
-                  
-                  <div class="input-group-row">
-                      <input type="text" id="bgUrlInput" class="glass-input" placeholder="Tempel URL Gambar di sini...">
-                      <button onclick="saveCustomBackground()" class="btn-primary" style="width:auto; margin-left:10px;">Simpan</button>
-                  </div>
-                  <button onclick="resetBackground()" class="btn-action" style="margin-top:10px; width:auto; padding: 8px 15px; background: rgba(239, 68, 68, 0.1); color: var(--danger);">Reset Default</button>
-                  
-                  <h4 style="margin-top:20px;">Rekomendasi Tema:</h4>
+                  <div class="input-group-row"><input type="text" id="bgUrlInput" class="glass-input" placeholder="URL Gambar..."><button onclick="saveCustomBackground()" class="btn-primary" style="width:auto; margin-left:10px;">Simpan</button></div>
+                  <button onclick="resetBackground()" class="btn-action" style="margin-top:10px; width:auto; color: var(--danger);">Reset</button>
+                  <h4 style="margin-top:20px;">Rekomendasi:</h4>
                   <div class="theme-grid">
-                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1536617621239-1b32d034356e?q=80&w=1974');" onclick="setBgFromPreset(this)">
-                        <span>Sawah Pagi</span>
-                      </div>
-                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232');" onclick="setBgFromPreset(this)">
-                        <span>Sunset Bali</span>
-                      </div>
-                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1740');" onclick="setBgFromPreset(this)">
-                        <span>Hijau Segar</span>
-                      </div>
-                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=80&w=1950');" onclick="setBgFromPreset(this)">
-                        <span>Malam Syahdu</span>
-                      </div>
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1536617621239-1b32d034356e?q=80&w=1974');" onclick="setBgFromPreset(this)"><span>Sawah</span></div>
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232');" onclick="setBgFromPreset(this)"><span>Bali</span></div>
                   </div>
               </div>
           </div>
@@ -375,124 +317,46 @@
   <div class="toast" id="toast"></div>
 
   <div id="addFormPopup" class="popup-glass">
-    <div class="popup-head" style="padding: 20px 25px; background: linear-gradient(135deg, var(--primary), #34d399); color: white; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="margin:0; font-size:1.2rem;">Input Reservasi</h3>
-        <button class="close-btn" onclick="closePopup('addFormPopup')" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+    <div class="popup-head" style="padding: 20px; background: var(--primary-gradient); color: white; display: flex; justify-content: space-between;">
+        <h3>Input Reservasi</h3><button class="close-btn" onclick="closePopup('addFormPopup')" style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
     </div>
     <form id="reservation-form" style="padding: 25px;">
-      
-      <div class="form-group">
-          <label>Tanggal Reservasi</label>
-          <input type="date" id="inputDate" class="glass-input" required />
-      </div>
-
-      <div class="form-group">
-          <label>Nama Pemesan</label>
-          <input type="text" id="nama" class="glass-input" required />
-          <span class="err-msg" id="nama-error"></span>
+      <div class="form-group"><label>Tanggal</label><input type="date" id="inputDate" class="glass-input" required /></div>
+      <div class="form-group"><label>Nama</label><input type="text" id="nama" class="glass-input" required /><span class="err-msg" id="nama-error"></span></div>
+      <div class="form-row">
+          <div class="form-group"><label>HP</label><input type="tel" id="nomorHp" class="glass-input" /><span class="err-msg" id="nomorHp-error"></span></div>
+          <div class="form-group"><label>Jam</label><input type="time" id="jam" class="glass-input" required /><span class="err-msg" id="jam-error"></span></div>
       </div>
       <div class="form-row">
-          <div class="form-group">
-              <label>No. HP</label>
-              <input type="tel" id="nomorHp" class="glass-input" placeholder="08..." />
-              <span class="err-msg" id="nomorHp-error"></span>
-          </div>
-          <div class="form-group">
-              <label>Jam</label>
-              <input type="time" id="jam" class="glass-input" required />
-              <span class="err-msg" id="jam-error"></span>
-          </div>
+          <div class="form-group"><label>Jml Org</label><input type="number" id="jumlah" class="glass-input" min="1" required /><span class="err-msg" id="jumlah-error"></span></div>
+          <div class="form-group"><label>Tempat</label><select id="tempat" class="glass-input" required onchange="updateCapacityInfo('reservation-form')"></select><small id="capacity-info"></small><span class="err-msg" id="tempat-error"></span></div>
       </div>
-      <div class="form-row">
-          <div class="form-group">
-              <label>Jml Org</label>
-              <input type="number" id="jumlah" class="glass-input" min="1" required />
-              <span class="err-msg" id="jumlah-error"></span>
-          </div>
-          <div class="form-group">
-              <label>Tempat</label>
-              <select id="tempat" class="glass-input" required onchange="updateCapacityInfo('reservation-form')"></select>
-              <small id="capacity-info" style="color:var(--primary); font-size:0.8rem;"></small>
-              <span class="err-msg" id="tempat-error"></span>
-          </div>
-      </div>
-      
-      <div class="highlight-box" style="background:#fffbeb; border:1px dashed var(--accent); padding:10px; border-radius:10px; margin-bottom:15px;">
+      <div class="highlight-box" style="background:#fffbeb; border:1px dashed var(--accent); padding:10px; margin-bottom:15px;">
           <div class="form-row">
-              <div class="form-group">
-                  <label>DP (Rp)</label>
-                  <input type="number" id="dp" class="glass-input" value="0" />
-              </div>
-              <div class="form-group">
-                  <label>Via</label>
-                  <select id="tipeDp" class="glass-input">
-                    <option value="">- Tanpa DP -</option><option>Transfer BCA</option>
-                    <option>Transfer Mandiri</option><option>Transfer BRI</option><option>QRIS</option><option>Cash</option>
-                  </select>
-              </div>
+              <div class="form-group"><label>DP</label><input type="number" id="dp" class="glass-input" value="0" /></div>
+              <div class="form-group"><label>Via</label><select id="tipeDp" class="glass-input"><option value="">- Tanpa DP -</option><option>Transfer BCA</option><option>Cash</option></select></div>
           </div>
       </div>
-      
-      <div class="form-group">
-          <label>Menu Pesanan <span class="err-msg" id="menus-error"></span></label>
-          <div id="selected-menus-container"></div>
-          <button type="button" class="btn-dashed" id="add-menu-btn" onclick="addMenuSelectionRow('reservation-form')" style="width:100%; border:2px dashed #ccc; background:transparent; padding:8px; border-radius:8px; cursor:pointer;">
-              + Tambah Menu
-          </button>
-      </div>
-
-      <div class="form-group">
-          <label>Catatan</label>
-          <textarea id="tambahan" class="glass-input" rows="2"></textarea>
-      </div>
-
-      <div class="popup-foot" style="margin-top:20px;">
-        <button type="button" class="btn-primary full-width" onclick="simpanReservasi()">Simpan</button>
-      </div>
+      <div class="form-group"><label>Menu</label><div id="selected-menus-container"></div><button type="button" class="btn-dashed" onclick="addMenuSelectionRow('reservation-form')" style="width:100%;">+ Tambah Menu</button></div>
+      <div class="form-group"><label>Catatan</label><textarea id="tambahan" class="glass-input" rows="2"></textarea></div>
+      <div class="popup-foot" style="margin-top:20px;"><button type="button" class="btn-primary full-width" onclick="simpanReservasi()">Simpan</button></div>
     </form>
   </div>
 
   <div id="editFormPopup" class="popup-glass"></div>
   <div id="menuManagementPopup" class="popup-glass"></div>
   <div id="locationManagementPopup" class="popup-glass"></div>
-  <div id="analysisPopup" class="popup-glass"></div>
   <div id="broadcastListPopup" class="popup-glass large"></div>
+  <div id="broadcastSettingsPopup" class="popup-glass"><div class="popup-header" style="padding:20px; background:var(--primary); color:white;"><h3>Template Pesan</h3></div><div style="padding:20px;"><textarea id="broadcastMessage" class="glass-input" rows="5"></textarea><div style="text-align:right; margin-top:10px;"><button onclick="saveBroadcastMessage()" class="btn-primary">Simpan</button></div></div></div>
+  <div id="exportDataPopup" class="popup-glass"><div class="popup-header" style="padding:20px; background:var(--primary); color:white;"><h3>Export JSON</h3></div><div style="padding:20px;"><textarea id="export-data-output" class="glass-input" readonly style="height:150px;"></textarea><div style="text-align:right; margin-top:10px;"><button onclick="copyExportCode()" class="btn-primary">Salin</button></div></div></div>
   
-  <div id="broadcastSettingsPopup" class="popup-glass">
-    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Template Pesan</h3></div>
-    <div style="padding:20px;">
-        <textarea id="broadcastMessage" class="glass-input" rows="5" placeholder="Halo kak..."></textarea>
-        <div class="popup-foot" style="margin-top:15px; text-align:right;">
-            <button onclick="saveBroadcastMessage()" class="btn-primary">Simpan</button>
-            <button onclick="closePopup('broadcastSettingsPopup')" class="btn-action" style="width:auto;">Tutup</button>
-        </div>
-    </div>
-  </div>
-
-  <div id="exportDataPopup" class="popup-glass">
-    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Export Data</h3></div>
-    <div style="padding:20px;">
-        <textarea id="export-data-output" class="glass-input code-view" readonly style="height:150px; font-family:monospace;"></textarea>
-        <div class="popup-foot" style="margin-top:15px; text-align:right;">
-            <button onclick="copyExportCode()" class="btn-primary">Salin</button>
-            <button onclick="closePopup('exportDataPopup')" class="btn-action" style="width:auto;">Tutup</button>
-        </div>
-    </div>
-  </div>
-
   <div id="printOptionsPopup" class="popup-glass">
-    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Cetak Laporan</h3></div>
+    <div class="popup-header" style="padding:20px; background:var(--primary); color:white;"><h3>Cetak Laporan</h3></div>
     <div style="padding:20px;">
-        <div id="print-options-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
-            <label><input type="checkbox" id="print-detail-menu" checked> Rincian Menu</label>
-            <label><input type="checkbox" id="print-kontak" checked> Kontak</label>
-            <label><input type="checkbox" id="print-dp" checked> Info DP</label>
-            <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
-        </div>
-        <div class="popup-foot" style="text-align:right;">
-            <button onclick="executePrint()" class="btn-primary">Print Preview</button>
-            <button onclick="closePopup('printOptionsPopup')" class="btn-action" style="width:auto;">Batal</button>
-        </div>
+        <div style="margin-bottom:15px;"><label>Format:</label><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><label><input type="radio" name="printFormat" value="cards" checked> Kartu</label><label><input type="radio" name="printFormat" value="table"> Tabel</label></div></div>
+        <div style="margin-bottom:15px;"><label>Urutkan:</label><select id="print-sort-by" class="glass-input"><option value="time">Waktu</option><option value="name">Nama</option><option value="location">Tempat</option></select></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"><label><input type="checkbox" id="print-detail-menu" checked> Menu</label><label><input type="checkbox" id="print-dp" checked> DP</label></div>
+        <div style="text-align:right;"><button onclick="executePrint()" class="btn-primary">Print Preview</button><button onclick="closePopup('printOptionsPopup')" class="btn-action" style="width:auto;">Batal</button></div>
     </div>
   </div>
 
