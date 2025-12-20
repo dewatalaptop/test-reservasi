@@ -1,6 +1,6 @@
 // ============================================================================
 // FILE: app.js
-// BAGIAN 1: KONFIGURASI, AUTHENTICATION, NAVIGASI (SAFE MODE)
+// BAGIAN 1: KONFIGURASI, AUTHENTICATION, NAVIGASI (FIXED)
 // ============================================================================
 
 /**
@@ -15,6 +15,7 @@ const firebaseConfig = {
   appId: "1:213151400721:web:e51b0d8cdd24206cf682b0"
 };
 
+// Inisialisasi Firebase
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 } else {
@@ -26,53 +27,75 @@ const auth = firebase.auth();
 
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(console.error);
 
+
 /**
- * 2. VARIABEL GLOBAL
+ * 2. VARIABEL GLOBAL (STATE MANAGEMENT)
+ * Pusat penyimpanan data sementara agar aplikasi cepat dan reaktif.
  */
-const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
-// Cache Data
-let dataReservasi = {};
-let allReservationsList = [];
-let requestsCache = [];
-let allReservationsCache = null; // Cache Analisis
-let detailMenu = {};          
-let menuPrices = {};          
-let locationsData = {};       
+// Konstanta Bulan
+const monthNames = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+];
 
-// State
-let tanggalDipilih = '';
+// --- Cache Data Transaksi ---
+let dataReservasi = {};       // Data Kalender (Key: "MM-DD", Value: Array)
+let allReservationsList = []; // Flat list bulan aktif (Dashboard)
+let requestsCache = [];       // Inbox Request
+let allReservationsCache = null; // Cache Global untuk Analisis Bisnis (Lazy Load)
+
+// --- LISTENER VARIABLES (INI YANG KEMARIN HILANG & BIKIN ERROR) ---
+let unsubscribeReservations = null; // Listener Kalender
+let unsubscribeRequests = null;     // Listener Inbox
+
+// --- Cache Data Master ---
+let detailMenu = {};          // Format: { "Paket G": ["Nasi", "Ayam", ...] }
+let menuPrices = {};          // Format: { "Paket G": 50000 }
+let locationsData = {};       // Format: { "lantai-1": {name, capacity} }
+
+// --- State Navigasi & Kalender ---
+let tanggalDipilih = '';      // Format "MM-DD"
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
-let currentSortMode = 'jam';
+let currentSortMode = 'jam';  // Default sorting
+
+// --- State Analisis & Fitur Lain ---
+let analysisYear = new Date().getFullYear();
+let analysisMonth = 'all'; 
+let hasAutoOpened = false;       // Deep link flag
+let notificationInterval = null; // Interval notifikasi background
 let promoMessageCache = null;    
-let allCustomersCache = [];      
-let notificationInterval = null;
-let hasAutoOpened = false;
+let allCustomersCache = [];      // Cache pelanggan unik untuk Broadcast
 
 const BROADCAST_MESSAGE_KEY = 'dolanSawahBroadcastMessage'; 
 const BG_STORAGE_KEY = 'dolanSawahBg'; 
 
-// DOM References
+// --- Referensi DOM Global ---
 const loadingOverlay = document.getElementById('loadingOverlay');
 const toast = document.getElementById('toast');
 const overlay = document.getElementById('overlay');
 
+
 /**
- * 3. SISTEM OTENTIKASI & INITIALISASI (FIXED LOGIC)
+ * 3. SISTEM OTENTIKASI (AUTH)
  */
 auth.onAuthStateChanged(user => {
     const loginContainer = document.getElementById('login-container');
     const appLayout = document.getElementById('app-layout');
     
     if (user) {
-        console.log("Auth: Login sukses.");
+        // --- USER LOGIN ---
+        console.log("Auth: User terhubung (" + user.email + ")");
+        
         if(loginContainer) loginContainer.style.display = 'none';
         if(appLayout) {
-            appLayout.style.display = 'flex';
+            appLayout.style.display = 'flex'; // Flex untuk struktur layout yang benar
+            
+            // Animasi masuk
             setTimeout(() => {
                 appLayout.style.opacity = 1;
-                // Pastikan tab dashboard aktif default
+                // Pastikan tab dashboard aktif default jika belum ada yang aktif
                 if(!document.querySelector('.content-section.active')) {
                     switchTab('dashboard');
                 }
@@ -80,11 +103,13 @@ auth.onAuthStateChanged(user => {
         }
         
         updateHeaderDate();
-        applySavedBackground();
-        initializeApp(); // Panggil fungsi utama
+        applySavedBackground(); 
+        initializeApp(); // Mulai load data
         
     } else {
-        console.log("Auth: Logout.");
+        // --- USER LOGOUT ---
+        console.log("Auth: User logout");
+        
         if(loginContainer) loginContainer.style.display = 'flex';
         if(appLayout) appLayout.style.display = 'none';
         cleanupApp();
@@ -92,8 +117,8 @@ auth.onAuthStateChanged(user => {
 });
 
 /**
- * FUNGSI INISIALISASI (YANG DIPERBAIKI)
- * Tidak lagi menggunakan 'await' pada loadMenus/Locations agar tidak memblokir aplikasi.
+ * 4. FUNGSI INISIALISASI (SAFE MODE)
+ * Memuat data tanpa memblokir UI jika koneksi lambat.
  */
 function initializeApp() { 
   showLoader();
@@ -103,6 +128,7 @@ function initializeApp() {
     // 1. Cek Parameter URL (Deep Link)
     const urlParams = new URLSearchParams(window.location.search);
     const paramDate = urlParams.get('date');
+
     if (paramDate) {
         const d = new Date(paramDate);
         if (!isNaN(d.getTime())) {
@@ -112,16 +138,18 @@ function initializeApp() {
     }
 
     // 2. Load Data Utama (Kalender & Inbox) - Prioritas Tertinggi
-    if (typeof loadReservationsForCurrentMonth === 'function') {
-        loadReservationsForCurrentMonth(); 
-    }
-    if (typeof initInboxListener === 'function') {
-        initInboxListener();
-    }
+    // Menggunakan timeout kecil untuk memastikan variabel global sudah siap
+    setTimeout(() => {
+        if (typeof loadReservationsForCurrentMonth === 'function') {
+            loadReservationsForCurrentMonth(); 
+        }
+        if (typeof initInboxListener === 'function') {
+            initInboxListener();
+        }
+    }, 100);
 
     // 3. Load Data Pendukung (Menu & Lokasi) - BACKGROUND PROCESS
-    // Kita jalankan tanpa 'await' agar dashboard langsung terbuka.
-    // Jika gagal, user tetap bisa pakai aplikasi (hanya detail menu yg mungkin kosong sebentar).
+    // Tidak menggunakan 'await' agar dashboard langsung terbuka
     loadMenus().catch(e => console.warn("Menu load bg error:", e));
     loadLocations().catch(e => console.warn("Loc load bg error:", e));
     
@@ -130,21 +158,20 @@ function initializeApp() {
         setupReliableNotificationChecker(); 
     }
 
-    console.log("System: Inisialisasi UI Selesai (Data loading in background).");
+    console.log("System: Inisialisasi Selesai (Background loading active).");
 
   } catch (e) {
     console.error("Critical Init Error:", e);
-    // Jangan tampilkan toast error fatal kecuali benar-benar crash
+    // Error ditangkap oleh Debugger di index.html
   } finally {
     // Pastikan loading hilang apa pun yang terjadi
-    setTimeout(() => hideLoader(), 500);
+    setTimeout(() => hideLoader(), 800);
   }
 }
 
 // --- FUNGSI LOAD DATA MASTER ---
 
 async function loadMenus() {
-  // Silent load (tanpa loader blocking)
   try {
     const snapshot = await db.collection('menus').get();
     detailMenu = {};
@@ -194,7 +221,11 @@ async function handleLogin() {
   const pass = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('login-error');
   
-  if (!email || !pass) { errEl.style.display='block'; errEl.textContent='Isi semua field.'; return; }
+  if (!email || !pass) { 
+      errEl.style.display='block'; 
+      errEl.textContent='Isi semua field.'; 
+      return; 
+  }
   
   showLoader();
   try { 
@@ -209,15 +240,21 @@ async function handleLogin() {
 
 function handleLogout() { 
     if(confirm("Yakin ingin keluar?")) {
-        auth.signOut().then(() => location.reload());
+        showLoader();
+        auth.signOut().then(() => {
+            location.reload();
+        });
     }
 }
 
 function cleanupApp() {
     if (notificationInterval) clearInterval(notificationInterval);
-    if (typeof unsubscribeReservations === 'function') unsubscribeReservations();
-    if (typeof unsubscribeRequests === 'function') unsubscribeRequests();
+    // Cek dulu apakah variabel listener ada dan berupa fungsi sebelum dipanggil
+    if (typeof unsubscribeReservations === 'function') { unsubscribeReservations(); }
+    if (typeof unsubscribeRequests === 'function') { unsubscribeRequests(); }
+    
     dataReservasi = {};
+    requestsCache = [];
 }
 
 // --- NAVIGASI ---
@@ -242,6 +279,9 @@ function switchTab(tabId) {
     // Update Title
     const tEl = document.getElementById('page-title');
     if(tEl) tEl.innerText = tabId.charAt(0).toUpperCase() + tabId.slice(1);
+    
+    const mEl = document.getElementById('mobile-date-display');
+    if(mEl) mEl.innerText = tabId === 'dashboard' ? 'Overview' : tabId.charAt(0).toUpperCase() + tabId.slice(1);
 
     // Mobile Sidebar Close
     if(window.innerWidth < 768) {
@@ -251,7 +291,6 @@ function switchTab(tabId) {
     
     // Trigger Analysis Load jika perlu
     if(tabId === 'analysis' && typeof runUIAnalysis === 'function') {
-        // Cek dulu filter
         if(typeof initAnalysisFilters === 'function') initAnalysisFilters();
         runUIAnalysis();
     }
@@ -260,18 +299,28 @@ function switchTab(tabId) {
 function toggleSidebar() {
     const sb = document.getElementById('sidebar');
     const ov = document.getElementById('sidebarOverlay');
+    const btn = document.getElementById('mobile-toggle');
+    const icon = btn.querySelector('i');
+
     if(sb.classList.contains('open')) {
         sb.classList.remove('open');
         if(ov) ov.classList.remove('active');
+        icon.classList.remove('fa-times');
+        icon.classList.add('fa-bars');
     } else {
         sb.classList.add('open');
         if(ov) ov.classList.add('active');
+        icon.classList.remove('fa-bars');
+        icon.classList.add('fa-times');
     }
 }
 
 function updateHeaderDate() {
     const el = document.getElementById('current-date-display');
-    if(el) el.innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    if(el) {
+        const d = new Date();
+        el.innerText = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
 }
 
 // ============================================================================
