@@ -1788,7 +1788,7 @@ function copyExportCode() {
 
 
 /**
- * 26. PRINT SYSTEM ADVANCED (FIXED + DETAIL MENU + EQUAL HEIGHT)
+ * 26. PRINT SYSTEM ADVANCED (FINAL: SORTING FIX & DETAIL MENU)
  */
 function printData() {
     if(!tanggalDipilih) return showToast("Pilih tanggal dulu di Kalender!", "error");
@@ -1805,7 +1805,15 @@ function executePrint() {
         const formatEl = document.querySelector('input[name="printFormat"]:checked');
         const format = formatEl ? formatEl.value : 'cards';
         
-        const sortBy = document.getElementById('print-sort-by').value;
+        // --- LOGIKA SORTING (Fixed Mapping) ---
+        const rawSortBy = document.getElementById('print-sort-by').value;
+        let sortBy = 'jam'; 
+        
+        if (rawSortBy === 'name') sortBy = 'nama';
+        else if (rawSortBy === 'location') sortBy = 'tempat';
+        else if (rawSortBy === 'time') sortBy = 'jam';
+        // --------------------------------------
+
         const showMenu = document.getElementById('print-detail-menu').checked;
         const showKontak = document.getElementById('print-kontak').checked;
         const showDp = document.getElementById('print-dp').checked;
@@ -1826,7 +1834,7 @@ function executePrint() {
                 if(showMenu) {
                     if(r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
                         menuStr = r.menus.map(m => {
-                            // Detail menu untuk tabel (inline)
+                            // Detail menu inline
                             let details = '';
                             if(detailMenu[m.name] && detailMenu[m.name].length > 0) {
                                 details = `<br><span style="color:#666; font-size:0.8em;">(${detailMenu[m.name].join(', ')})</span>`;
@@ -1876,12 +1884,12 @@ function executePrint() {
                 if (showMenu) {
                     if(r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
                         const items = r.menus.map(m => {
-                            // --- LOGIKA: TAMPILKAN ISI PAKET ---
+                            // --- LOGIKA TAMPILKAN ISI PAKET ---
                             let detailHtml = '';
                             if(detailMenu[m.name] && detailMenu[m.name].length > 0) {
                                 detailHtml = `<div style="font-size:10px; color:#555; margin-left:15px; margin-top:2px;">- ${detailMenu[m.name].join(', ')}</div>`;
                             }
-                            // ----------------------------------------
+                            // ----------------------------------
                             return `<div style="margin-bottom:4px;"><b>${m.quantity}x</b> ${escapeHtml(m.name)}${detailHtml}</div>`;
                         }).join('');
                         menuHtml = `<div class="print-menu-box">${items}</div>`;
@@ -1939,11 +1947,11 @@ function executePrint() {
                     .print-table th, .print-table td { border: 1px solid #444; padding: 6px 8px; vertical-align: top; }
                     .print-table th { background: #eee; font-weight: bold; }
                     
-                    /* CARD STYLES (EQUAL HEIGHT MAGIC) */
+                    /* CARD STYLES (EQUAL HEIGHT) */
                     .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: stretch; }
                     .print-card { 
                         border: 1px solid #000; padding: 12px; break-inside: avoid; border-radius: 6px; 
-                        display: flex; flex-direction: column; justify-content: space-between; /* Header atas, Footer bawah */
+                        display: flex; flex-direction: column; justify-content: space-between; 
                         height: 100%; box-sizing: border-box;
                     }
                     
@@ -2074,6 +2082,11 @@ async function runUIAnalysis() {
         customerStats[name] = (customerStats[name] || 0) + 1;
     });
 
+    const sortedHours = Object.keys(hoursCounts).sort();
+    const hoursData = sortedHours.map(h => hoursCounts[h]);
+    const topMenus = Object.entries(menuCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+    const topCustomers = Object.entries(customerStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
+
     // Render Charts
     const ctx = chartCanvas.getContext('2d');
     if(chartInstance) chartInstance.destroy();
@@ -2101,7 +2114,6 @@ async function runUIAnalysis() {
 
     const ctxMenu = document.getElementById('menuChart').getContext('2d');
     if(chartMenu) chartMenu.destroy();
-    const topMenus = Object.entries(menuCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
     chartMenu = new Chart(ctxMenu, {
         type: 'doughnut',
         data: { labels: topMenus.map(i=>i[0]), datasets: [{ data: topMenus.map(i=>i[1]), backgroundColor: ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6'] }] },
@@ -2130,7 +2142,7 @@ async function runUIAnalysis() {
 
 
 /**
- * 28. SETTINGS & UTILITIES (HELPER)
+ * 28. SETTINGS, BACKGROUND & HELPERS
  */
 document.addEventListener('DOMContentLoaded', () => applySavedBackground());
 
@@ -2268,7 +2280,7 @@ function shareViaWhatsApp(type) {
     }
 }
 
-// --- UTILITIES DASAR (EXPANDED) ---
+// --- UTILITIES DASAR (LENGKAP) ---
 function formatRupiah(amount) {
     if (amount === null || amount === undefined || isNaN(amount)) return '0';
     return Number(amount).toLocaleString('id-ID');
@@ -2334,4 +2346,4 @@ window.addEventListener('click', () => {
     if(d) d.style.display = 'none'; 
 });
 
-console.log("Dolan Sawah App Loaded: Ultimate Edition - Final (WA, Print Detail & Utilities Fixed).");
+console.log("Dolan Sawah App Loaded: Ultimate Edition - Final V3 (Full Code).");
