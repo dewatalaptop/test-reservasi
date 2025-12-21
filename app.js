@@ -325,7 +325,7 @@ function updateHeaderDate() {
 
 // ============================================================================
 // FILE: app.js
-// BAGIAN 2: INBOX SYSTEM, ACTIONS & KALENDER CORE
+// BAGIAN 2: INBOX SYSTEM, ACTIONS & KALENDER CORE (MODIFIED)
 // ============================================================================
 
 /**
@@ -473,7 +473,7 @@ function renderInboxUI() {
 
 /**
  * 7. FITUR CHAT WHATSAPP CERDAS (INBOX)
- * Menghitung total harga dan membuat template pesan konfirmasi otomatis untuk pesanan baru.
+ * UPDATE: PPN 10%, DP 50% dari Grand Total, & Multi Rekening
  */
 function prepareInboxChat(id) {
     const r = requestsCache.find(item => item.id === id);
@@ -482,7 +482,7 @@ function prepareInboxChat(id) {
     let totalFood = 0;
     let orderSummary = "";
     
-    // Kalkulasi Total Harga berdasarkan Cache Harga (menuPrices)
+    // 1. Kalkulasi Total Harga Makanan
     if (r.menus && Array.isArray(r.menus)) {
         r.menus.forEach(m => {
             let unitPrice = menuPrices[m.name] || 0;
@@ -492,11 +492,14 @@ function prepareInboxChat(id) {
         });
     }
     
-    // Kalkulasi DP (Logika: 50% dari total)
-    let grandTotal = totalFood; 
+    // 2. Kalkulasi PPN 10% & Grand Total
+    let taxAmount = totalFood * 0.10; // PPN 10%
+    let grandTotal = totalFood + taxAmount; // Total + PPN
+    
+    // 3. Kalkulasi DP (50% dari Grand Total)
     let dpAmount = grandTotal > 0 ? grandTotal * 0.5 : 0; 
 
-    // Template Pesan Profesional
+    // 4. Template Pesan Baru (Sesuai Permintaan)
     let msg = `Halo Kak *${r.nama}* 👋,\n\n` +
         `Terima kasih telah melakukan reservasi di *Dolan Sawah*.\n` +
         `Kami ingin mengkonfirmasi detail pesanan Kakak sebagai berikut:\n\n` +
@@ -506,12 +509,18 @@ function prepareInboxChat(id) {
         `📍 Tempat: *${r.tempat}*\n\n` +
         `🍽 *Rincian Pesanan:*\n${orderSummary || '   (Tidak ada menu spesifik)\n'}\n` +
         `----------------------------------\n` +
-        `💰 *Total Estimasi: Rp ${formatRupiah(grandTotal)}*\n` +
+        `💵 Subtotal: Rp ${formatRupiah(totalFood)}\n` +
+        `🧾 PPN 10%: Rp ${formatRupiah(taxAmount)}\n` +
+        `💰 *TOTAL: Rp ${formatRupiah(grandTotal)}*\n` +
         `----------------------------------\n\n` +
-        `Untuk mengamankan slot ini, mohon kesediaannya melakukan pembayaran *DP sebesar Rp ${formatRupiah(dpAmount)}*.\n\n` +
-        `Transfer dapat dilakukan ke:\n` +
-        `🏦 *BCA: 123-456-7890*\n` +
-        `a.n Dolan Sawah Management\n\n` +
+        `Untuk mengamankan slot ini, mohon kesediaannya melakukan pembayaran *DP Minimal (50%) sebesar:*\n` +
+        `👉 *Rp ${formatRupiah(dpAmount)}*\n\n` +
+        `Transfer dapat dilakukan ke:\n\n` +
+        `🏦 *Rekening Dolan Sawah*\n\n` +
+        `Rekening Bca 0132021439\n\n` +
+        `Rekening Mandiri 1360034582244\n\n` +
+        `Rekening BRI 008101001911567\n\n` +
+        `A/n Oktavianus Dwi Wahyu widyanarka\n\n` +
         `Mohon kirimkan bukti transfer jika sudah ya Kak. Terima kasih! 🙏`;
 
     // Validasi Nomor HP
@@ -801,6 +810,7 @@ function buatKalender() {
       </div>`);
   }
 }
+
 // ============================================================================
 // FILE: app.js
 // BAGIAN 3: INTERAKSI KALENDER, RENDER DETAIL (UPGRADE), CRUD & DATA MASTER
