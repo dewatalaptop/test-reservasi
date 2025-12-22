@@ -1,555 +1,628 @@
-/* ==========================================================================
-   1. VARIABLES & RESET (ULTIMATE THEME)
-   ========================================================================== */
-:root {
-  /* Brand Colors (Professional & Nature) */
-  --primary: #059669;         /* Emerald Green (Base) */
-  --primary-dark: #047857;
-  --primary-gradient: linear-gradient(135deg, #059669, #34d399);
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="theme-color" content="#059669"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
-  --secondary: #64748b;       /* Slate Grey */
-  --accent: #d97706;          /* Amber/Gold for Highlights */
+  <title>Dolan Sawah Manager - Ultimate Edition</title>
+
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  /* Status Colors */
-  --danger: #ef4444;
-  --success: #10b981;
-  --info: #3b82f6;
-  --warning: #f59e0b;
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  /* Text Colors */
-  --text-main: #1e293b;       /* Sangat Gelap untuk Keterbacaan */
-  --text-muted: #64748b;
-  --text-light: #ffffff;
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
-  /* Glassmorphism Variables */
-  /* Background Panel (Blurry) */
-  --glass-bg: rgba(255, 255, 255, 0.85); 
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-  --glass-blur: blur(20px) saturate(180%);
-  
-  /* Dimensions */
-  --sidebar-w: 280px;
-  --header-h: 70px;
-  --radius-xl: 20px;
-  --radius-md: 12px;
-  
-  /* Background Image Default (Akan ditimpa JS) */
-  --bg-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232&auto=format&fit=crop');
-}
+  <link rel="stylesheet" href="style.css">
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-
-body {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  margin: 0; padding: 0;
-  color: var(--text-main);
-  background-color: #f0fdf4; /* Fallback color */
-  font-size: 14px;
-  overflow-x: hidden;
-  line-height: 1.5;
-}
-
-/* Scrollbar Modern */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-
-/* ==========================================================================
-   2. BACKGROUND SYSTEM (SHARP BACKGROUND REQUEST)
-   ========================================================================== */
-.bg-nature {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background-image: var(--bg-image);
-  background-position: center; 
-  background-size: cover; 
-  background-repeat: no-repeat;
-  z-index: -2;
-  /* PENTING: Tidak ada filter blur di sini agar gambar tajam */
-  transition: background-image 0.5s ease-in-out;
-}
-
-.bg-overlay-glass {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.15); /* Overlay tipis gelap untuk kontras teks */
-  z-index: -1;
-  /* Tidak ada backdrop-filter di sini agar background tetap tajam */
-}
-
-/* ==========================================================================
-   3. GLASS COMPONENTS (PANEL ONLY BLUR)
-   ========================================================================== */
-/* Hanya elemen ini yang blur, background belakang tetap tajam */
-.glass-panel, .glass-sidebar, .glass-header, .glass-card, .popup-glass, .glass-dropdown, .mobile-header {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur); /* Safari support */
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  border-radius: var(--radius-xl);
-}
-
-.glass-input {
-  width: 100%; padding: 12px 15px; border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.1); 
-  background: rgba(255,255,255, 0.5); /* Semi transparan */
-  font-family: inherit; font-size: 0.95rem; transition: 0.3s;
-  color: var(--text-main);
-}
-.glass-input:focus {
-  background: #fff; border-color: var(--primary); 
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
-}
-
-/* ==========================================================================
-   4. LAYOUT & SIDEBAR
-   ========================================================================== */
-/* Layout Utama Flex agar footer/konten stabil */
-#app-layout {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-/* Sidebar Desktop */
-.sidebar {
-  width: var(--sidebar-w); height: 100vh; 
-  position: fixed; left: 0; top: 0; z-index: 1000;
-  display: flex; flex-direction: column;
-  border-radius: 0 24px 24px 0; /* Lengkungan hanya di kanan */
-  border-left: none; border-top: none; border-bottom: none;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sidebar-brand {
-  height: 80px; display: flex; align-items: center; justify-content: space-between; padding: 0 25px;
-  font-size: 1.4rem; font-weight: 800; color: var(--primary);
-  letter-spacing: -0.5px;
-}
-.sidebar-brand i { color: var(--accent); font-size: 1.6rem; }
-
-.nav-menu { flex: 1; padding: 20px 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-
-.nav-item {
-  display: flex; align-items: center; gap: 15px; padding: 14px 20px;
-  border-radius: 14px; cursor: pointer; color: var(--text-main);
-  font-weight: 600; transition: all 0.2s; position: relative;
-}
-.nav-item:hover { background: rgba(255,255,255,0.5); color: var(--primary); }
-.nav-item.active {
-  background: var(--primary-gradient);
-  color: white; box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
-}
-.nav-item .badge {
-  margin-left: auto; background: var(--danger); color: white;
-  padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
-}
-
-.sidebar-footer { padding: 20px; border-top: 1px solid rgba(0,0,0,0.05); }
-
-/* Main Content Wrapper */
-.main-content {
-  margin-left: var(--sidebar-w); padding: 30px;
-  min-height: 100vh; transition: margin-left 0.3s;
-  padding-bottom: 50px;
-}
-
-/* FIX VISIBILITY: Agar tab tidak menumpuk saat load */
-.content-section { 
-  display: none; 
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-.content-section.active { 
-  display: block; 
-  opacity: 1;
-  animation: fadeIn 0.4s ease forwards;
-}
-@keyframes fadeIn { 
-  from { opacity: 0; transform: translateY(10px); } 
-  to { opacity: 1; transform: translateY(0); } 
-}
-
-/* ==========================================================================
-   5. HEADER & NAVIGATION
-   ========================================================================== */
-/* Desktop Header */
-.top-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 30px; padding: 15px 25px;
-}
-.header-left h2 { margin: 0; font-size: 1.8rem; color: var(--text-main); }
-.header-left small { color: var(--text-muted); font-size: 0.95rem; font-weight: 500; }
-
-/* Mobile Header (Hidden on Desktop) */
-.mobile-header {
-  display: none; /* Default hidden */
-  position: fixed; top: 0; left: 0; width: 100%; height: 65px;
-  z-index: 990; padding: 0 15px; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  border-radius: 0 0 20px 20px; /* Rounded bottom corners */
-}
-
-/* Notification Bell */
-.icon-btn, .notif-icon {
-  position: relative; width: 45px; height: 45px;
-  background: white; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-  font-size: 1.2rem; color: var(--text-muted); transition: 0.2s;
-}
-.icon-btn:hover { transform: translateY(-2px); color: var(--primary); }
-
-.badge-count, .badge-dot {
-  position: absolute; top: -2px; right: -2px;
-  background: var(--danger); color: white;
-  width: 20px; height: 20px; border-radius: 50%;
-  font-size: 0.75rem; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  border: 2px solid white;
-}
-.badge-dot { width: 12px; height: 12px; top: 10px; right: 10px; border: 2px solid #fff; }
-
-/* Dropdown */
-.glass-dropdown {
-  position: absolute; top: 60px; right: 0; width: 300px;
-  display: none; z-index: 1100; overflow: hidden; background: white;
-  animation: slideDown 0.2s ease;
-}
-@keyframes slideDown { from {opacity: 0; transform: translateY(-10px);} to {opacity: 1; transform: translateY(0);} }
-
-.dropdown-head { padding: 15px; border-bottom: 1px solid #eee; font-weight: 700; background: #f9fafb; display: flex; justify-content: space-between; align-items: center; }
-.notification-item { list-style: none; padding: 12px 15px; border-bottom: 1px solid #f1f1f1; font-size: 0.9rem; cursor: pointer; }
-.notification-item:hover { background: #f0fdf4; color: var(--primary); }
-ul#notification-list-ul { margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
-
-/* ==========================================================================
-   6. DASHBOARD & ANALYSIS (PROFESSIONAL UPGRADE)
-   ========================================================================== */
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
-
-/* General Stat Card */
-.stat-card {
-  padding: 25px; display: flex; align-items: center; gap: 20px; 
-  position: relative; overflow: hidden; transition: transform 0.2s;
-}
-.stat-card:hover { transform: translateY(-5px); border-color: #fff; }
-.stat-card::before { /* Shine Effect */
-  content: ''; position: absolute; top: 0; left: -50%; width: 50%; height: 100%;
-  background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
-  transform: skewX(-20deg); transition: 0.5s; pointer-events: none;
-}
-.stat-card:hover::before { left: 150%; }
-
-.stat-icon {
-  width: 55px; height: 55px; border-radius: 16px;
-  display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
-  background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-}
-.stat-icon.blue { color: #3b82f6; }
-.stat-icon.orange { color: #f59e0b; }
-.stat-icon.green { color: #10b981; }
-
-.stat-info h4 { margin: 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
-.stat-info .value { font-size: 1.8rem; font-weight: 800; color: var(--text-main); display: block; margin-top: 5px; }
-
-/* --- ANALYSIS: BUSINESS TOOLS (KPI & CHARTS) --- */
-/* Layout ketat agar grafik tidak offside */
-.chart-container {
-    position: relative; 
-    width: 100%; 
-    overflow: hidden; /* Mencegah canvas melebar */
-}
-
-/* Strategic Tools Grid */
-.tools-grid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-    gap: 15px; 
-}
-.btn-action {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  padding: 15px; background: rgba(255,255,255,0.6);
-  border: 1px solid rgba(0,0,0,0.05); border-radius: 16px;
-  cursor: pointer; transition: 0.2s; color: var(--text-main); font-weight: 600;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-}
-.btn-action:hover { background: white; color: var(--primary); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-.btn-action i { font-size: 1.5rem; color: var(--primary); }
-
-/* Dashboard List */
-.dashboard-split { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-.card-box { padding: 0; display: flex; flex-direction: column; height: 100%; max-height: 500px; }
-.card-header { padding: 20px; border-bottom: 1px solid rgba(0,0,0,0.05); }
-.card-header h3 { margin: 0; font-size: 1.1rem; color: var(--text-main); font-weight: 700; }
-.list-container { padding: 10px; overflow-y: auto; flex: 1; }
-
-.quick-actions-grid { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-
-/* ==========================================================================
-   7. CALENDAR SYSTEM
-   ========================================================================== */
-.calendar-wrapper { padding: 25px; }
-
-.calendar-header-custom {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;
-}
-.cal-nav-group { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.5); padding: 5px; border-radius: 12px; }
-.cal-nav-group button {
-  background: white; border: none; width: 36px; height: 36px; border-radius: 10px;
-  cursor: pointer; color: var(--text-main); transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-.cal-nav-group button:hover { background: var(--primary); color: white; }
-.month-label { font-size: 1.2rem; font-weight: 700; padding: 0 10px; min-width: 150px; text-align: center; }
-
-.btn-today {
-  padding: 8px 16px; background: var(--text-main); color: white; border: none;
-  border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 0.85rem;
-}
-
-.calendar-weekdays {
-  display: grid; grid-template-columns: repeat(7, 1fr); 
-  text-align: center; margin-bottom: 10px; 
-}
-.calendar-weekdays div { font-weight: 700; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; }
-
-.calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-
-.calendar-day {
-  background: rgba(255,255,255,0.6);
-  border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 14px;
-  min-height: 90px;
-  padding: 8px;
-  cursor: pointer; position: relative;
-  transition: all 0.2s ease;
-  display: flex; flex-direction: column; align-items: center;
-}
-.calendar-day:hover { background: white; transform: translateY(-3px); z-index: 2; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-.calendar-day.today { background: #fff7ed; border-color: var(--accent); }
-.calendar-day.selected { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 5px 15px rgba(5, 150, 105, 0.3); }
-
-.day-number { font-weight: 700; font-size: 1rem; margin-bottom: 5px; }
-.calendar-day.selected .day-number { color: white; }
-.calendar-day.today .day-number { color: var(--accent); }
-
-.reservation-count {
-  font-size: 0.75rem; background: white; color: var(--primary); padding: 2px 8px;
-  border-radius: 10px; font-weight: 700; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-.calendar-day.selected .reservation-count { background: rgba(255,255,255,0.2); color: white; }
-
-/* Detail View */
-.detail-card { padding: 25px; margin-bottom: 50px; border-top: 5px solid var(--primary); margin-top: 20px; }
-.detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-.detail-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-
-/* ==========================================================================
-   8. COMPONENTS & BUTTONS
-   ========================================================================== */
-button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; }
-
-.btn-primary, .btn-primary-gradient {
-  background: var(--primary-gradient); color: white;
-  padding: 12px 20px; border-radius: 12px; font-weight: 600;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-}
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); }
-
-.full-width { width: 100%; }
-
-.btn-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; }
-.btn-icon.primary { background: var(--primary); }
-.btn-icon.whatsapp { background: #25D366; }
-.btn-icon.danger { background: var(--danger); }
-.btn-icon.info { background: var(--info); }
-
-.pill { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
-
-/* Forms */
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-.err-msg { color: var(--danger); font-size: 0.8rem; margin-left: 5px; }
-
-/* Menu Selection */
-.menu-selection-row { display: flex; gap: 10px; margin-bottom: 10px; }
-.btn-del { width: 40px; background: #fee2e2; color: var(--danger); border-radius: 10px; border:none; cursor: pointer; }
-
-/* ==========================================================================
-   9. LOGIN SCREEN
-   ========================================================================== */
-.login-wrapper {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  display: flex; justify-content: center; align-items: center;
-  z-index: 9999; background: rgba(0,0,0,0.3);
-}
-.login-card { width: 90%; max-width: 400px; padding: 40px; text-align: center; }
-.brand-logo { font-size: 3rem; color: var(--primary); margin-bottom: 10px; }
-.input-group { position: relative; margin-bottom: 15px; }
-.input-group i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted); z-index: 2; }
-.input-group input { padding-left: 45px; }
-.error-text { color: var(--danger); font-size: 0.9rem; margin-top: 15px; display: none; font-weight: 600; }
-
-/* ==========================================================================
-   10. POPUPS & OVERLAYS
-   ========================================================================== */
-.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1001; display: none; backdrop-filter: blur(5px); }
-.popup-glass {
-  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 90%; max-width: 550px; max-height: 90vh; overflow-y: auto;
-  z-index: 1002; display: none; padding: 0; background: white;
-  animation: zoomIn 0.2s ease;
-}
-.popup-glass.large { max-width: 750px; }
-@keyframes zoomIn { from {opacity:0; transform: translate(-50%, -50%) scale(0.95);} to {opacity:1; transform: translate(-50%, -50%) scale(1);} }
-
-.loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 3000; display: none; justify-content: center; align-items: center; }
-.spinner { width: 45px; height: 45px; border: 4px solid #eee; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { 100% { transform: rotate(360deg); } }
-
-.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 25px; border-radius: 30px; z-index: 3001; display: none; font-size: 0.9rem; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
-.toast.success { background: var(--success); }
-.toast.error { background: var(--danger); }
-
-/* ==========================================================================
-   11. ADVANCED MOBILE RESPONSIVE (SMART UX)
-   ========================================================================== */
-@media (max-width: 768px) {
-  /* Layout Adjustment */
-  .main-content { margin-left: 0; padding: 80px 15px 100px 15px; } 
-  .mobile-header { display: flex; }
-  .top-header { display: none; }
-
-  /* Smart Sidebar (Drawer Style) */
-  .sidebar {
-    width: 280px; transform: translateX(-100%); 
-    box-shadow: 5px 0 15px rgba(0,0,0,0.1);
-    z-index: 1000;
-  }
-  .sidebar.open { transform: translateX(0); }
-  .close-sidebar-mobile { display: block !important; }
-
-  /* Typography Scaling */
-  h2 { font-size: 1.4rem; }
-  h3 { font-size: 1.1rem; }
-  .stat-card { padding: 15px; }
-  .stat-info .value { font-size: 1.4rem; }
-
-  /* Grid Collapse */
-  .dashboard-split, .charts-row { grid-template-columns: 1fr !important; }
-  .stats-grid, .kpi-grid, .tools-grid { grid-template-columns: 1fr 1fr !important; gap: 10px; } /* 2 kolom di mobile */
-  .form-row { grid-template-columns: 1fr; }
-
-  /* Calendar Optimization */
-  .calendar-day { min-height: 70px; padding: 2px; }
-  .day-number { font-size: 0.9rem; }
-  .reservation-count { font-size: 0.65rem; padding: 1px 4px; border-radius: 6px; }
-  .calendar-weekdays div { font-size: 0.7rem; }
-  
-  /* Inputs & Buttons (Touch Friendly) */
-  .glass-input, button, .nav-item { min-height: 44px; }
-  
-  /* Detail View */
-  .detail-list { grid-template-columns: 1fr; }
-  .detail-header { flex-direction: column; align-items: flex-start; gap: 15px; }
-  .detail-actions { width: 100%; display: flex; justify-content: space-between; }
-  .search-wrapper { width: 100%; }
-}
-
-@media (max-width: 400px) {
-    /* Small Phone adjustments */
-    .stats-grid, .kpi-grid, .tools-grid { grid-template-columns: 1fr !important; }
-    .calendar-day { min-height: 60px; }
+  <style>
+    /* Background Tidak Blur, Overlay Bening */
+    .bg-overlay-glass {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(0, 0, 0, 0.2) !important; 
+    }
     
-    /* Analysis KPI Card Mobile Fix */
-    .kpi-grid .stat-card {
-        padding: 12px !important;
-        gap: 10px !important;
+    /* Hanya panel konten yang memiliki efek blur */
+    .glass-panel, .glass-sidebar, .glass-header, .glass-card, .popup-glass, .glass-dropdown, .mobile-header {
+        backdrop-filter: blur(20px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        background: rgba(255, 255, 255, 0.85) !important;
     }
-    .kpi-grid .stat-icon {
-        width: 35px !important;
-        height: 35px !important;
-        font-size: 1rem !important;
-        margin-bottom: 0 !important;
+
+    /* MOBILE ADVANCE TWEAKS */
+    @media (max-width: 768px) {
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 999;
+            display: none; opacity: 0; transition: opacity 0.3s;
+            backdrop-filter: blur(4px);
+        }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+        
+        h2 { font-size: 1.5rem !important; }
+        h3 { font-size: 1.2rem !important; }
+        .btn-action, .stat-card { min-height: 100px; }
+        #printOptionsPopup { width: 95% !important; max-height: 85vh; }
     }
-}
+  </style>
+</head>
+<body>
 
-/* ==========================================================================
-   12. PRINT STYLES (ADVANCED REPORTING)
-   ========================================================================== */
-@media print {
-  /* Hide non-printable elements */
-  .sidebar, .mobile-header, .top-header, .bg-nature, .bg-overlay-glass, 
-  .btn-action, .btn-primary, .btn-icon, .form-group, .section-tools, 
-  .popup-glass, .overlay, .toast, .detail-actions, .search-wrapper,
-  .cal-nav-group button, .btn-today, .theme-grid, .btn-primary-gradient, .close-btn {
-      display: none !important;
-  }
+  <div class="bg-nature" id="dynamic-bg"></div>
+  <div class="bg-overlay-glass"></div>
 
-  /* Reset Layout for Print */
-  body { background: white; margin: 0; padding: 0; color: black; font-size: 12pt; overflow: visible; }
-  .main-content { margin: 0; padding: 0; width: 100%; min-height: auto; }
-  
-  /* Reset Container */
-  .glass-panel, .glass-card, .reservation-item {
-      background: white !important;
-      box-shadow: none !important;
-      border: none !important;
-      backdrop-filter: none !important;
-  }
-
-  /* Force Block & Black Text */
-  #app-layout, .content-section.active { display: block !important; }
-  * { color: black !important; text-shadow: none !important; }
-
-  /* --- PRINT GRID SYSTEM (EQUAL HEIGHT) --- */
-  .print-grid {
-      display: grid !important;
-      grid-template-columns: 1fr 1fr !important; /* 2 Kolom */
-      gap: 15px !important;
-  }
-  
-  .print-card {
-      border: 1px solid #000 !important;
-      padding: 15px !important;
-      break-inside: avoid;
-      page-break-inside: avoid;
-      border-radius: 8px !important;
+  <div id="login-container" class="login-wrapper glass-blur">
+    <div class="login-card glass-panel">
+      <div class="brand-logo">
+        <i class="fas fa-leaf"></i>
+      </div>
+      <h2>Dolan Sawah</h2>
+      <p>Management System</p>
       
-      /* MAGIC: Equal Height Content */
-      display: flex !important;
-      flex-direction: column !important;
-      justify-content: space-between !important;
-      height: 100% !important;
-  }
+      <div class="input-group">
+        <i class="fas fa-envelope"></i>
+        <input type="email" id="loginEmail" placeholder="Email Admin" class="glass-input">
+      </div>
+      <div class="input-group">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="loginPassword" placeholder="Password" class="glass-input">
+      </div>
+      
+      <button onclick="handleLogin()" class="btn-primary full-width">Masuk Dashboard</button>
+      <p id="login-error" class="error-text">Email atau password salah.</p>
+    </div>
+  </div>
 
-  /* Detail Menu in Print */
-  .print-menu-box {
-      font-size: 10pt !important;
-      margin-top: 5px;
-      padding-top: 5px;
-      border-top: 1px dashed #ccc;
-  }
-}
+  <div id="app-layout" style="display:none;">
+    
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-/* ==========================================================================
-   FIX: PERBAIKAN TAMPILAN ANALISIS (MOBILE)
-   ========================================================================== */
-/* Izinkan Judul KPI (misal: EST. REVENUE) untuk melipat ke baris baru */
-.kpi-grid .stat-info h4 {
-    white-space: normal !important;
-    line-height: 1.2;
-    margin-bottom: 5px;
-    font-size: 0.85rem !important;
-}
+    <div class="mobile-header glass-header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button id="mobile-toggle" onclick="toggleSidebar()" aria-label="Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div style="line-height: 1.1;">
+                <span class="header-brand" style="display:block; font-size:1.1rem;">Dolan Sawah</span>
+                <small style="font-size:0.75rem; color:var(--text-muted);" id="mobile-date-display">System Manager</small>
+            </div>
+        </div>
+        
+        <div class="header-actions-mobile">
+            <div class="notif-icon" onclick="toggleNotificationDropdown(event)">
+                <i class="far fa-bell"></i>
+                <span id="notification-badge-mobile" class="badge-dot" style="display:none;"></span>
+            </div>
+        </div>
+    </div>
 
-/* Buat Nilai Angka (misal: Rp 1.000.0) Responsif */
-.kpi-grid .stat-info .value {
-    font-size: clamp(1.1rem, 5vw, 1.4rem) !important;
-    line-height: 1.1;
-    display: block;
-    word-break: break-word;
-}
+    <div class="sidebar glass-sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
+        </div>
+        <button class="close-sidebar-mobile" onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; display:none;">
+            <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="nav-menu">
+        <div class="nav-item active" onclick="switchTab('calendar')">
+          <i class="far fa-calendar-alt"></i> Kalender Utama
+        </div>
+
+        <div class="nav-item" onclick="switchTab('dashboard')">
+          <i class="fas fa-chart-pie"></i> Statistik & Overview
+        </div>
+
+        <div class="nav-item" onclick="switchTab('inbox')">
+          <i class="fas fa-inbox"></i> Inbox Request
+          <span class="badge" id="sidebar-badge" style="display:none;">0</span>
+        </div>
+        
+        <div class="nav-item" onclick="switchTab('data')">
+          <i class="fas fa-database"></i> Data Master
+        </div>
+        <div class="nav-item" onclick="switchTab('broadcast')">
+          <i class="fab fa-whatsapp"></i> Broadcast WA
+        </div>
+        <div class="nav-item" onclick="switchTab('analysis')">
+          <i class="fas fa-chart-line"></i> Analisis Bisnis
+        </div>
+        <div class="nav-item" onclick="switchTab('settings')">
+          <i class="fas fa-cog"></i> Pengaturan
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-profile-mini" style="margin-bottom:15px; display:flex; align-items:center; gap:10px; padding:10px; background:rgba(255,255,255,0.4); border-radius:12px;">
+            <div style="width:35px; height:35px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
+                <i class="fas fa-user-shield"></i>
+            </div>
+            <div style="line-height:1;">
+                <small style="display:block; font-weight:700; color:var(--text-main);">Admin</small>
+                <small style="font-size:0.7rem; color:var(--text-muted);">Manager Access</small>
+            </div>
+        </div>
+        <button class="btn-logout" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i> Keluar
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      
+      <header class="top-header glass-header-desktop">
+        <div class="header-left">
+            <h2 id="page-title">Kalender Utama</h2>
+            <small id="current-date-display"></small>
+        </div>
+        <div class="header-right">
+            <div id="notification-bell-container" class="icon-btn" onclick="toggleNotificationDropdown(event)">
+                <i class="far fa-bell"></i>
+                <span id="notification-badge" class="badge-count" style="display: none;">0</span>
+                
+                <div id="notification-dropdown" class="notification-dropdown glass-dropdown">
+                  <div class="dropdown-head">
+                      Pending Request
+                      <button onclick="initInboxListener()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem;" title="Refresh Inbox"><i class="fas fa-sync"></i></button>
+                  </div>
+                  <ul id="notification-list-ul"></ul>
+                  <div style="padding:10px; text-align:center; border-top:1px solid #eee; font-size:0.85rem;">
+                      <a href="#" onclick="switchTab('inbox')" style="color:var(--primary); text-decoration:none; font-weight:600;">Lihat Semua Inbox</a>
+                  </div>
+                </div>
+            </div>
+        </div>
+      </header>
+
+      <div id="tab-calendar" class="content-section active">
+        <div class="glass-panel calendar-wrapper">
+            <div class="calendar-header-custom">
+                <div class="cal-nav-group">
+                    <button onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button>
+                    <div class="month-label" id="monthYear">...</div>
+                    <button onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <button class="btn-today" onclick="goToToday()">Hari Ini</button>
+            </div>
+            
+            <div class="calendar-weekdays">
+                <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
+            </div>
+            <div class="calendar-days" id="calendar"></div> 
+        </div>
+
+        <div id="reservation-view-container" style="display: none;">
+            <div class="glass-panel detail-card">
+                <div class="detail-header">
+                    <h3 id="reservation-view-title">Detail Reservasi</h3>
+                    
+                    <div class="detail-actions">
+                        <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru"><i class="fas fa-plus"></i></button>
+                        
+                        <div class="dropdown-wrapper" style="position:relative; display:inline-block;">
+                            <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan"><i class="fas fa-sort-amount-down"></i></button>
+                            <div id="sort-dropdown" class="glass-dropdown" style="display:none; position:absolute; right:0; top:45px; width:150px; z-index:50;">
+                                <div class="notification-item" onclick="applySort('jam')"><i class="far fa-clock"></i> Waktu</div>
+                                <div class="notification-item" onclick="applySort('tempat')"><i class="fas fa-map-marker-alt"></i> Tempat</div>
+                                <div class="notification-item" onclick="applySort('nama')"><i class="fas fa-font"></i> Nama</div>
+                            </div>
+                        </div>
+
+                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Laporan WA"><i class="fab fa-whatsapp"></i></button>
+                        <button class="btn-icon" onclick="printData()" title="Print Laporan"><i class="fas fa-print"></i></button>
+                        <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari nama, tempat..." class="glass-input">
+                </div>
+
+                <div id="reservation-detail-list" class="detail-list"></div>
+            </div>
+        </div>
+      </div>
+
+      <div id="tab-dashboard" class="content-section">
+        <div class="stats-grid">
+            <div class="stat-card glass-panel">
+              <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+              <div class="stat-info">
+                  <h4>Tamu Hari Ini</h4>
+                  <span class="value" id="stat-today-count">0</span>
+              </div>
+            </div>
+            <div class="stat-card glass-panel clickable" onclick="switchTab('inbox')">
+              <div class="stat-icon orange"><i class="fas fa-inbox"></i></div>
+              <div class="stat-info">
+                  <h4>Pending Request</h4>
+                  <span class="value" id="stat-pending-count">0</span>
+              </div>
+            </div>
+            <div class="stat-card glass-panel">
+              <div class="stat-icon green"><i class="fas fa-wallet"></i></div>
+              <div class="stat-info">
+                  <h4>Omzet DP (Bulan)</h4>
+                  <span class="value" id="stat-revenue-month">Rp 0</span>
+              </div>
+            </div>
+        </div>
+
+        <div class="dashboard-split">
+            <div class="glass-panel card-box">
+                <div class="card-header">
+                    <h3><i class="fas fa-clock"></i> Reservasi Terbaru</h3>
+                </div>
+                <div id="dashboard-recent-list" class="list-container">
+                    <p class="text-center loading-text">Memuat data...</p>
+                </div>
+            </div>
+            <div class="glass-panel card-box">
+                <div class="card-header">
+                    <h3><i class="fas fa-bolt"></i> Menu Cepat</h3>
+                </div>
+                <div class="quick-actions-grid">
+                    <button class="btn-action" onclick="showAddForm()">
+                        <i class="fas fa-plus-circle"></i> Input Manual
+                    </button>
+                    <button class="btn-action" onclick="switchTab('inbox')">
+                        <i class="fas fa-check-double"></i> Cek Inbox
+                    </button>
+                    <button class="btn-action" onclick="showBroadcastMain()">
+                        <i class="fab fa-whatsapp"></i> Promo WA
+                    </button>
+                    <button class="btn-action" onclick="forceSync()">
+                        <i class="fas fa-sync-alt"></i> Refresh App
+                    </button>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div id="tab-inbox" class="content-section">
+        <div class="section-tools" style="margin-bottom: 20px;">
+            <button class="btn-primary" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Inbox</button>
+        </div>
+        <div id="inbox-container" class="grid-cards"></div>
+      </div>
+
+      <div id="tab-data" class="content-section">
+        <div class="data-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div class="glass-panel" style="padding: 20px;">
+                <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">Daftar Menu</h3>
+                    <button class="btn-primary-gradient" style="width:auto; padding:8px 15px;" onclick="showMenuManagement()">Kelola</button>
+                </div>
+                <div id="preview-menu-list" class="scroll-list" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+            <div class="glass-panel" style="padding: 20px;">
+                <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">Daftar Tempat</h3>
+                    <button class="btn-primary-gradient" style="width:auto; padding:8px 15px;" onclick="showLocationManagement()">Kelola</button>
+                </div>
+                <div id="preview-location-list" class="scroll-list" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+            <div class="glass-panel full-width" style="grid-column: 1 / -1; padding: 20px;">
+                 <div class="card-header" style="border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 10px; margin-bottom: 15px;"><h3>Tools Data</h3></div>
+                 <div class="tools-container" style="display: flex; gap: 15px;">
+                    <button class="btn-action" style="padding: 10px 20px; flex-direction: row;" onclick="showExportDataPopup()"><i class="fas fa-file-code"></i> Backup Data (JSON)</button>
+                 </div>
+            </div>
+        </div>
+      </div>
+
+      <div id="tab-broadcast" class="content-section">
+          <div class="glass-panel center-content" style="text-align: center; padding: 50px;">
+              <div class="big-icon" style="font-size: 4rem; color: #25D366; margin-bottom: 20px;"><i class="fab fa-whatsapp"></i></div>
+              <h3>Broadcast Promosi</h3>
+              <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto 30px;">Kirim pesan massal ke database pelanggan yang pernah melakukan reservasi.</p>
+              <div class="action-row" style="display: flex; justify-content: center; gap: 15px;">
+                  <button class="btn-primary" style="width: auto;" onclick="showBroadcastSettings()">Atur Pesan</button>
+                  <button class="btn-primary-gradient" style="width: auto; background: var(--success);" onclick="showBroadcastList()">Mulai Kirim</button>
+              </div>
+          </div>
+      </div>
+
+      <div id="tab-analysis" class="content-section">
+        <div class="glass-panel" style="padding: 25px;">
+             <div class="card-header-flex" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:10px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:15px;">
+                <div>
+                    <h3 style="margin:0; font-size:1.4rem;"><i class="fas fa-chart-pie" style="color:var(--primary);"></i> Business Intelligence</h3>
+                    <small style="color:var(--text-muted);">Pantau kesehatan bisnis dan performa reservasi.</small>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <select id="anl-month-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
+                        <option value="all">Semua Bulan</option>
+                    </select>
+                    <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
+                    </select>
+                    <button class="btn-primary" onclick="runUIAnalysis()" style="width:auto;"><i class="fas fa-sync"></i></button>
+                </div>
+             </div>
+
+             <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--success);">
+                     <div class="stat-icon green" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-money-bill-wave"></i></div>
+                     <div class="stat-info">
+                         <h4 style="font-size:0.8rem;">EST. REVENUE</h4>
+                         <span class="value" id="stat-kpi-revenue" style="font-size:1.4rem;">Rp 0</span>
+                     </div>
+                 </div>
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--info);">
+                     <div class="stat-icon blue" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-users"></i></div>
+                     <div class="stat-info">
+                         <h4 style="font-size:0.8rem;">TOTAL PAX</h4>
+                         <span class="value" id="stat-kpi-pax" style="font-size:1.4rem;">0</span>
+                     </div>
+                 </div>
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--accent);">
+                     <div class="stat-icon orange" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-shopping-basket"></i></div>
+                     <div class="stat-info">
+                         <h4 style="font-size:0.8rem;">AVG ORDER VALUE</h4>
+                         <span class="value" id="stat-kpi-aov" style="font-size:1.4rem;">Rp 0</span>
+                     </div>
+                 </div>
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--danger);">
+                     <div class="stat-icon" style="color:var(--danger); background:#fee2e2; width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-ban"></i></div>
+                     <div class="stat-info">
+                         <h4 style="font-size:0.8rem;">CANCEL RATE</h4>
+                         <span class="value" id="stat-kpi-cancel" style="font-size:1.4rem;">0%</span>
+                     </div>
+                 </div>
+             </div>
+
+             <div class="charts-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                 <div style="background:rgba(255,255,255,0.6); padding:20px; border-radius:16px; border:1px solid rgba(0,0,0,0.05);">
+                     <h4 style="margin-top:0; color:var(--text-main); font-size:1rem; margin-bottom:15px;"><i class="fas fa-chart-area"></i> Tren Kunjungan</h4>
+                     <div class="chart-container" style="height: 300px; position:relative;">
+                         <canvas id="mainChart"></canvas>
+                     </div>
+                 </div>
+                 
+                 <div style="background:rgba(255,255,255,0.6); padding:20px; border-radius:16px; border:1px solid rgba(0,0,0,0.05);">
+                     <h4 style="margin-top:0; color:var(--text-main); font-size:1rem; margin-bottom:15px;"><i class="far fa-clock"></i> Jam Sibuk (Peak Hours)</h4>
+                     <div class="chart-container" style="height: 300px; position:relative;">
+                         <canvas id="hoursChart"></canvas>
+                     </div>
+                 </div>
+             </div>
+
+             <div class="charts-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                 <div class="glass-card" style="padding:20px;">
+                     <h4 style="margin-top:0; margin-bottom:15px;"><i class="fas fa-utensils"></i> Menu Terlaris (Top 5)</h4>
+                     <div class="chart-container" style="height: 250px; position:relative;">
+                         <canvas id="menuChart"></canvas>
+                     </div>
+                 </div>
+
+                 <div class="glass-card" style="padding:20px; overflow:hidden; display:flex; flex-direction:column;">
+                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h4 style="margin:0;"><i class="fas fa-crown" style="color:gold;"></i> Top Pelanggan Setia</h4>
+                        <span class="pill" style="background:var(--primary-gradient); color:white;">CRM</span>
+                     </div>
+                     <div style="overflow-y:auto; flex:1;">
+                         <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                             <thead>
+                                 <tr style="background:rgba(0,0,0,0.03); color:var(--text-muted); border-bottom:2px solid #eee;">
+                                     <th style="padding:10px; text-align:left;">Nama Pelanggan</th>
+                                     <th style="padding:10px; text-align:center;">Kunjungan</th>
+                                 </tr>
+                             </thead>
+                             <tbody id="top-customer-table"></tbody>
+                         </table>
+                     </div>
+                 </div>
+             </div>
+        </div>
+      </div>
+
+      <div id="tab-settings" class="content-section">
+          <div class="glass-panel">
+              <div class="card-header">
+                  <h3><i class="fas fa-image"></i> Tampilan Background</h3>
+              </div>
+              <div style="padding: 20px;">
+                  <p>Ganti background aplikasi sesuai suasana hati Anda.</p>
+                  
+                  <div class="input-group-row">
+                      <input type="text" id="bgUrlInput" class="glass-input" placeholder="Tempel URL Gambar di sini...">
+                      <button onclick="saveCustomBackground()" class="btn-primary" style="width:auto; margin-left:10px;">Simpan</button>
+                  </div>
+                  <button onclick="resetBackground()" class="btn-action" style="margin-top:10px; width:auto; padding: 8px 15px; background: rgba(239, 68, 68, 0.1); color: var(--danger);">Reset Default</button>
+                  
+                  <h4 style="margin-top:20px;">Rekomendasi Tema:</h4>
+                  <div class="theme-grid">
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1536617621239-1b32d034356e?q=80&w=1974');" onclick="setBgFromPreset(this)">
+                        <span>Sawah Pagi</span>
+                      </div>
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232');" onclick="setBgFromPreset(this)">
+                        <span>Sunset Bali</span>
+                      </div>
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=1740');" onclick="setBgFromPreset(this)">
+                        <span>Hijau Segar</span>
+                      </div>
+                      <div class="theme-option" style="background-image: url('https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?q=80&w=1950');" onclick="setBgFromPreset(this)">
+                        <span>Malam Syahdu</span>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+    </div> 
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+  <div class="toast" id="toast"></div>
+
+  <div id="addFormPopup" class="popup-glass">
+    <div class="popup-head" style="padding: 20px 25px; background: linear-gradient(135deg, var(--primary), #34d399); color: white; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin:0; font-size:1.2rem;">Input Reservasi</h3>
+        <button class="close-btn" onclick="closePopup('addFormPopup')" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+    </div>
+    <form id="reservation-form" style="padding: 25px;">
+      
+      <div class="form-group">
+          <label>Tanggal Reservasi</label>
+          <input type="date" id="inputDate" class="glass-input" required />
+      </div>
+
+      <div class="form-group">
+          <label>Nama Pemesan</label>
+          <input type="text" id="nama" class="glass-input" required />
+          <span class="err-msg" id="nama-error"></span>
+      </div>
+      <div class="form-row">
+          <div class="form-group">
+              <label>No. HP</label>
+              <input type="tel" id="nomorHp" class="glass-input" placeholder="08..." />
+              <span class="err-msg" id="nomorHp-error"></span>
+          </div>
+          <div class="form-group">
+              <label>Jam</label>
+              <input type="time" id="jam" class="glass-input" required />
+              <span class="err-msg" id="jam-error"></span>
+          </div>
+      </div>
+      <div class="form-row">
+          <div class="form-group">
+              <label>Jml Org</label>
+              <input type="number" id="jumlah" class="glass-input" min="1" required />
+              <span class="err-msg" id="jumlah-error"></span>
+          </div>
+          <div class="form-group">
+              <label>Tempat</label>
+              <select id="tempat" class="glass-input" required onchange="updateCapacityInfo('reservation-form')"></select>
+              <small id="capacity-info" style="color:var(--primary); font-size:0.8rem;"></small>
+              <span class="err-msg" id="tempat-error"></span>
+          </div>
+      </div>
+      
+      <div class="highlight-box" style="background:#fffbeb; border:1px dashed var(--accent); padding:10px; border-radius:10px; margin-bottom:15px;">
+          <div class="form-row">
+              <div class="form-group">
+                  <label>DP (Rp)</label>
+                  <input type="number" id="dp" class="glass-input" value="0" />
+              </div>
+              <div class="form-group">
+                  <label>Via</label>
+                  <select id="tipeDp" class="glass-input">
+                    <option value="">- Tanpa DP -</option><option>Transfer BCA</option>
+                    <option>Transfer Mandiri</option><option>Transfer BRI</option><option>QRIS</option><option>Cash</option>
+                  </select>
+              </div>
+          </div>
+      </div>
+      
+      <div class="form-group">
+          <label>Menu Pesanan <span class="err-msg" id="menus-error"></span></label>
+          <div id="selected-menus-container"></div>
+          <button type="button" class="btn-dashed" id="add-menu-btn" onclick="addMenuSelectionRow('reservation-form')" style="width:100%; border:2px dashed #ccc; background:transparent; padding:8px; border-radius:8px; cursor:pointer;">
+              + Tambah Menu
+          </button>
+      </div>
+
+      <div class="form-group">
+          <label>Catatan</label>
+          <textarea id="tambahan" class="glass-input" rows="2"></textarea>
+      </div>
+
+      <div class="popup-foot" style="margin-top:20px;">
+        <button type="button" class="btn-primary full-width" onclick="simpanReservasi()">Simpan</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="editFormPopup" class="popup-glass"></div>
+  <div id="menuManagementPopup" class="popup-glass"></div>
+  <div id="locationManagementPopup" class="popup-glass"></div>
+  <div id="analysisPopup" class="popup-glass"></div>
+  <div id="broadcastListPopup" class="popup-glass large"></div>
+  
+  <div id="broadcastSettingsPopup" class="popup-glass">
+    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Template Pesan</h3></div>
+    <div style="padding:20px;">
+        <textarea id="broadcastMessage" class="glass-input" rows="5" placeholder="Halo kak..."></textarea>
+        <div class="popup-foot" style="margin-top:15px; text-align:right;">
+            <button onclick="saveBroadcastMessage()" class="btn-primary">Simpan</button>
+            <button onclick="closePopup('broadcastSettingsPopup')" class="btn-action" style="width:auto;">Tutup</button>
+        </div>
+    </div>
+  </div>
+
+  <div id="exportDataPopup" class="popup-glass">
+    <div class="popup-header" style="padding: 20px; background:var(--primary); color:white;"><h3>Export Data</h3></div>
+    <div style="padding:20px;">
+        <textarea id="export-data-output" class="glass-input code-view" readonly style="height:150px; font-family:monospace;"></textarea>
+        <div class="popup-foot" style="margin-top:15px; text-align:right;">
+            <button onclick="copyExportCode()" class="btn-primary">Salin</button>
+            <button onclick="closePopup('exportDataPopup')" class="btn-action" style="width:auto;">Tutup</button>
+        </div>
+    </div>
+  </div>
+
+  <div id="printOptionsPopup" class="popup-glass">
+    <div class="popup-header" style="padding: 20px; background: linear-gradient(135deg, var(--primary), #3b82f6); color: white;">
+        <h3 style="margin:0;"><i class="fas fa-print"></i> Cetak Laporan</h3>
+    </div>
+    <div style="padding:25px;">
+        <p style="margin-bottom:20px; color:var(--text-muted); font-size:0.9rem;">Sesuaikan tampilan laporan yang akan dicetak.</p>
+        
+        <div style="margin-bottom:20px;">
+            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">1. Format Tampilan</label>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <label class="radio-box" style="border:1px solid #ccc; padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="printFormat" value="cards" checked> 
+                    <span><i class="fas fa-th-large" style="color:var(--primary);"></i> Kartu (Visual)</span>
+                </label>
+                <label class="radio-box" style="border:1px solid #ccc; padding:10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="printFormat" value="table"> 
+                    <span><i class="fas fa-table" style="color:var(--primary);"></i> Tabel (Ringkas)</span>
+                </label>
+            </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">2. Urutan Data</label>
+            <select id="print-sort-by" class="glass-input">
+                <option value="time">Urut Waktu (Pagi - Malam)</option>
+                <option value="name">Urut Nama (A - Z)</option>
+                <option value="location">Urut Tempat</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom:20px; background:#f8fafc; padding:15px; border-radius:10px;">
+            <label style="display:block; font-weight:700; margin-bottom:10px; color:var(--text-main);">3. Opsi Detail</label>
+            <div id="print-options-form" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <label><input type="checkbox" id="print-detail-menu" checked> Rincian Menu</label>
+                <label><input type="checkbox" id="print-kontak" checked> Kontak HP</label>
+                <label><input type="checkbox" id="print-dp" checked> Info DP</label>
+                <label><input type="checkbox" id="print-tambahan" checked> Catatan</label>
+            </div>
+        </div>
+
+        <div class="popup-foot" style="text-align:right; border-top:1px solid #eee; padding-top:15px;">
+            <button onclick="closePopup('printOptionsPopup')" class="btn-action" style="width:auto; margin-right:10px;">Batal</button>
+            <button onclick="executePrint()" class="btn-primary" style="width:auto;">
+                <i class="fas fa-print"></i> Print Preview
+            </button>
+        </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
