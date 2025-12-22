@@ -116,16 +116,19 @@
       </div>
       
       <div class="nav-menu">
-        <div class="nav-item active" onclick="switchTab('dashboard')">
-          <i class="fas fa-th-large"></i> Dashboard
+        <div class="nav-item active" onclick="switchTab('calendar')">
+          <i class="far fa-calendar-alt"></i> Kalender Utama
         </div>
+
+        <div class="nav-item" onclick="switchTab('dashboard')">
+          <i class="fas fa-chart-pie"></i> Statistik & Overview
+        </div>
+
         <div class="nav-item" onclick="switchTab('inbox')">
           <i class="fas fa-inbox"></i> Inbox Request
           <span class="badge" id="sidebar-badge" style="display:none;">0</span>
         </div>
-        <div class="nav-item" onclick="switchTab('calendar')">
-          <i class="far fa-calendar-alt"></i> Kalender Utama
-        </div>
+        
         <div class="nav-item" onclick="switchTab('data')">
           <i class="fas fa-database"></i> Data Master
         </div>
@@ -160,7 +163,7 @@
       
       <header class="top-header glass-header-desktop">
         <div class="header-left">
-            <h2 id="page-title">Dashboard</h2>
+            <h2 id="page-title">Kalender Utama</h2>
             <small id="current-date-display"></small>
         </div>
         <div class="header-right">
@@ -170,16 +173,69 @@
                 
                 <div id="notification-dropdown" class="notification-dropdown glass-dropdown">
                   <div class="dropdown-head">
-                      Pengingat "Say Thanks"
-                      <button onclick="runNotificationCheck()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem;"><i class="fas fa-sync"></i></button>
+                      Pending Request
+                      <button onclick="initInboxListener()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.8rem;" title="Refresh Inbox"><i class="fas fa-sync"></i></button>
                   </div>
                   <ul id="notification-list-ul"></ul>
+                  <div style="padding:10px; text-align:center; border-top:1px solid #eee; font-size:0.85rem;">
+                      <a href="#" onclick="switchTab('inbox')" style="color:var(--primary); text-decoration:none; font-weight:600;">Lihat Semua Inbox</a>
+                  </div>
                 </div>
             </div>
         </div>
       </header>
 
-      <div id="tab-dashboard" class="content-section active">
+      <div id="tab-calendar" class="content-section active">
+        <div class="glass-panel calendar-wrapper">
+            <div class="calendar-header-custom">
+                <div class="cal-nav-group">
+                    <button onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button>
+                    <div class="month-label" id="monthYear">...</div>
+                    <button onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <button class="btn-today" onclick="goToToday()">Hari Ini</button>
+            </div>
+            
+            <div class="calendar-weekdays">
+                <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
+            </div>
+            <div class="calendar-days" id="calendar"></div> 
+        </div>
+
+        <div id="reservation-view-container" style="display: none;">
+            <div class="glass-panel detail-card">
+                <div class="detail-header">
+                    <h3 id="reservation-view-title">Detail Reservasi</h3>
+                    
+                    <div class="detail-actions">
+                        <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru"><i class="fas fa-plus"></i></button>
+                        
+                        <div class="dropdown-wrapper" style="position:relative; display:inline-block;">
+                            <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan"><i class="fas fa-sort-amount-down"></i></button>
+                            <div id="sort-dropdown" class="glass-dropdown" style="display:none; position:absolute; right:0; top:45px; width:150px; z-index:50;">
+                                <div class="notification-item" onclick="applySort('jam')"><i class="far fa-clock"></i> Waktu</div>
+                                <div class="notification-item" onclick="applySort('tempat')"><i class="fas fa-map-marker-alt"></i> Tempat</div>
+                                <div class="notification-item" onclick="applySort('nama')"><i class="fas fa-font"></i> Nama</div>
+                            </div>
+                        </div>
+
+                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Laporan WA"><i class="fab fa-whatsapp"></i></button>
+                        <button class="btn-icon" onclick="printData()" title="Print Laporan"><i class="fas fa-print"></i></button>
+                        <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari nama, tempat..." class="glass-input">
+                </div>
+
+                <div id="reservation-detail-list" class="detail-list"></div>
+            </div>
+        </div>
+      </div>
+
+      <div id="tab-dashboard" class="content-section">
         <div class="stats-grid">
             <div class="stat-card glass-panel">
               <div class="stat-icon blue"><i class="fas fa-users"></i></div>
@@ -240,56 +296,6 @@
             <button class="btn-primary" onclick="initInboxListener()"><i class="fas fa-sync"></i> Refresh Inbox</button>
         </div>
         <div id="inbox-container" class="grid-cards"></div>
-      </div>
-
-      <div id="tab-calendar" class="content-section">
-        <div class="glass-panel calendar-wrapper">
-            <div class="calendar-header-custom">
-                <div class="cal-nav-group">
-                    <button onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button>
-                    <div class="month-label" id="monthYear">...</div>
-                    <button onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
-                </div>
-                <button class="btn-today" onclick="goToToday()">Hari Ini</button>
-            </div>
-            
-            <div class="calendar-weekdays">
-                <div>Min</div><div>Sen</div><div>Sel</div><div>Rab</div><div>Kam</div><div>Jum</div><div>Sab</div>
-            </div>
-            <div class="calendar-days" id="calendar"></div> 
-        </div>
-
-        <div id="reservation-view-container" style="display: none;">
-            <div class="glass-panel detail-card">
-                <div class="detail-header">
-                    <h3 id="reservation-view-title">Detail Reservasi</h3>
-                    
-                    <div class="detail-actions">
-                        <button class="btn-icon primary" onclick="showAddForm()" title="Tambah Baru"><i class="fas fa-plus"></i></button>
-                        
-                        <div class="dropdown-wrapper" style="position:relative; display:inline-block;">
-                            <button class="btn-icon info" onclick="toggleSortDropdown()" title="Urutkan"><i class="fas fa-sort-amount-down"></i></button>
-                            <div id="sort-dropdown" class="glass-dropdown" style="display:none; position:absolute; right:0; top:45px; width:150px; z-index:50;">
-                                <div class="notification-item" onclick="applySort('jam')"><i class="far fa-clock"></i> Waktu</div>
-                                <div class="notification-item" onclick="applySort('tempat')"><i class="fas fa-map-marker-alt"></i> Tempat</div>
-                                <div class="notification-item" onclick="applySort('nama')"><i class="fas fa-font"></i> Nama</div>
-                            </div>
-                        </div>
-
-                        <button class="btn-icon whatsapp" onclick="shareViaWhatsApp('day')" title="Laporan WA"><i class="fab fa-whatsapp"></i></button>
-                        <button class="btn-icon" onclick="printData()" title="Print Laporan"><i class="fas fa-print"></i></button>
-                        <button class="btn-icon danger" onclick="kembaliKeKalender()" title="Tutup"><i class="fas fa-times"></i></button>
-                    </div>
-                </div>
-                
-                <div class="search-wrapper">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="detailSearchInput" oninput="filterReservations(this.value)" placeholder="Cari nama, tempat..." class="glass-input">
-                </div>
-
-                <div id="reservation-detail-list" class="detail-list"></div>
-            </div>
-        </div>
       </div>
 
       <div id="tab-data" class="content-section">
