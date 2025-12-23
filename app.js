@@ -1544,7 +1544,6 @@ async function showBroadcastList() {
 
     showLoader();
     try {
-        // Ambil 500 reservasi terakhir untuk mendapatkan kontak
         const snap = await db.collection('reservations').orderBy('createdAt','desc').limit(500).get();
         const map = new Map();
         
@@ -1552,7 +1551,6 @@ async function showBroadcastList() {
             const data = d.data();
             if (data.nomorHp && isValidPhone(data.nomorHp)) {
                 const clean = cleanPhoneNumber(data.nomorHp);
-                // Hanya simpan jika nomor belum ada (Unik)
                 if (!map.has(clean)) {
                     map.set(clean, { phone: clean, name: data.nama });
                 }
@@ -1625,7 +1623,7 @@ function copyExportCode() {
 
 
 /**
- * 19. PRINT SYSTEM ADVANCED
+ * 19. PRINT SYSTEM ADVANCED (FIXED: MENU DETAILS)
  */
 function printData() {
     if (!tanggalDipilih) return showToast("Pilih tanggal dulu di Kalender!", "error");
@@ -1653,31 +1651,60 @@ function executePrint() {
         let contentHtml = '';
         
         if (format === 'table') {
-            const rows = sortedList.map((r, i) => `<tr>
+            const rows = sortedList.map((r, i) => {
+                let menuStr = '-';
+                if (showMenu) {
+                    if (r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
+                        menuStr = r.menus.map(m => {
+                            const details = detailMenu[m.name] || [];
+                            const detailStr = details.length > 0 ? `<br><span style="color:#555; font-size:0.85em;">(${details.join(', ')})</span>` : '';
+                            return `${m.quantity}x ${m.name}${detailStr}`;
+                        }).join('<br>');
+                    } else if (r.menu) {
+                        menuStr = r.menu;
+                    }
+                }
+                return `<tr>
                     <td style="text-align:center;">${i+1}</td>
                     <td style="text-align:center;">${escapeHtml(r.jam)}</td>
                     <td><b>${escapeHtml(r.nama)}</b>${showKontak ? `<br><small>${escapeHtml(r.nomorHp||'-')}</small>` : ''}</td>
                     <td style="text-align:center;">${r.jumlah}</td>
                     <td>${escapeHtml(r.tempat)}</td>
-                    ${showMenu ? `<td>${r.menus ? r.menus.map(m=>`${m.quantity}x ${m.name}`).join('<br>') : (r.menu||'-')}</td>` : ''}
+                    ${showMenu ? `<td>${menuStr}</td>` : ''}
                     ${showDp ? `<td>${r.dp > 0 ? formatRupiah(r.dp) : 'Belum'}</td>` : ''}
                     ${showNote ? `<td>${escapeHtml(r.tambahan||'-')}</td>` : ''}
-                </tr>`).join('');
+                </tr>`;
+            }).join('');
 
             contentHtml = `<table class="print-table"><thead><tr><th>No</th><th>Jam</th><th>Nama</th><th>Pax</th><th>Tempat</th>${showMenu?'<th>Menu</th>':''}${showDp?'<th>DP</th>':''}${showNote?'<th>Catatan</th>':''}</tr></thead><tbody>${rows}</tbody></table>`;
         } else {
-            contentHtml = `<div class="print-grid">` + sortedList.map((r, i) => `
+            contentHtml = `<div class="print-grid">` + sortedList.map((r, i) => {
+                let menuHtml = '';
+                if (showMenu) {
+                    if (r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
+                        const items = r.menus.map(m => {
+                            const details = detailMenu[m.name] || [];
+                            const detailStr = details.length > 0 ? `<div style="font-size:10px; color:#555; margin-left:15px; margin-top:2px;">- ${details.join(', ')}</div>` : '';
+                            return `<div style="margin-bottom:4px;"><b>${m.quantity}x</b> ${escapeHtml(m.name)}${detailStr}</div>`;
+                        }).join('');
+                        menuHtml = `<div class="print-menu-box">${items}</div>`;
+                    } else if (r.menu) {
+                        menuHtml = `<div class="print-menu-box">${escapeHtml(r.menu)}</div>`;
+                    }
+                }
+                return `
                 <div class="print-card">
                     <div>
                         <div class="pc-head"><span class="pc-num">#${i+1}</span><span class="pc-time">${escapeHtml(r.jam)}</span></div>
                         <div class="pc-body"><div class="pc-name">${escapeHtml(r.nama)}</div>${showKontak&&r.nomorHp?`<div class="pc-meta">📞 ${escapeHtml(r.nomorHp)}</div>`:''}<div class="pc-meta-row"><span>👥 ${r.jumlah}</span><span>📍 ${escapeHtml(r.tempat)}</span></div>
-                        ${showMenu && r.menus ? `<div class="print-menu-box">${r.menus.map(m=>`<div><b>${m.quantity}x</b> ${m.name}</div>`).join('')}</div>` : ''}
+                        ${menuHtml}
                         </div>
                     </div>
                     <div>${showDp?`<div class="pc-dp">${r.dp>0?`DP: ${formatRupiah(r.dp)}`:'BELUM DP'}</div>`:''}
                          ${showNote&&r.tambahan?`<div class="pc-note">${escapeHtml(r.tambahan)}</div>`:''}
                     </div>
-                </div>`).join('') + `</div>`;
+                </div>`;
+            }).join('') + `</div>`;
         }
 
         const win = window.open('', '_blank');
@@ -1695,6 +1722,7 @@ function executePrint() {
                 .print-menu-box { background:#eee; padding:5px; font-size:10px; margin-top:5px; border:1px dashed #999; }
                 .pc-dp { text-align:right; font-weight:bold; font-size:11px; border-top:1px solid #eee; margin-top:5px; }
                 .pc-note { font-style:italic; font-size:10px; background:#ffc; }
+                @media print { .print-grid { grid-template-columns: 1fr 1fr; } }
             </style>
             </head><body>
             <h3 style="text-align:center; margin:0;">Laporan Dolan Sawah</h3><p style="text-align:center; margin:5px 0 20px 0; border-bottom:1px solid #000; padding-bottom:10px;">${tanggalDipilih} ${monthNames[currentMonth]} ${currentYear}</p>
@@ -1725,11 +1753,9 @@ function initAnalysisFilters() {
 }
 
 async function runUIAnalysis() {
-    // Cek ketersediaan canvas
     const chartCanvas = document.getElementById('mainChart');
     if (!chartCanvas) return;
 
-    // Lazy Load Data Global
     if (!allReservationsCache) {
         showLoader();
         try { 
@@ -1741,7 +1767,6 @@ async function runUIAnalysis() {
         hideLoader();
     }
     
-    // Filter Data Berdasarkan Tahun & Bulan UI
     const yearSel = document.getElementById('anl-year-ui');
     const monthSel = document.getElementById('anl-month-ui');
     const selectedYear = parseInt(yearSel.value);
@@ -1755,7 +1780,7 @@ async function runUIAnalysis() {
         return matchYear && matchMonth;
     });
 
-    // --- 1. HITUNG KPI (Keuangan) ---
+    // KPI
     const totalRevenue = filteredData.reduce((acc, curr) => acc + (parseInt(curr.dp)||0), 0);
     const totalPax = filteredData.reduce((acc, curr) => acc + (parseInt(curr.jumlah)||0), 0);
     const totalTrans = filteredData.length;
@@ -1766,9 +1791,8 @@ async function runUIAnalysis() {
     document.getElementById('stat-kpi-aov').textContent = `Rp ${formatRupiah(aov)}`;
     document.getElementById('stat-kpi-cancel').textContent = "0%"; 
 
-    // --- 2. PERSIAPAN DATA GRAFIK ---
+    // Charts Data
     let labels = [], dataPoints = [];
-    
     if (selectedMonth === 'all') {
         labels = monthNames.map(m => m.substr(0,3));
         dataPoints = Array(12).fill(0);
@@ -1781,7 +1805,6 @@ async function runUIAnalysis() {
     }
 
     const hoursCounts = {}, menuCounts = {}, customerStats = {};
-    
     filteredData.forEach(r => {
         if (r.jam) { const h = r.jam.split(':')[0]; hoursCounts[h] = (hoursCounts[h] || 0) + 1; }
         if (r.menus && Array.isArray(r.menus)) {
@@ -1798,8 +1821,7 @@ async function runUIAnalysis() {
     const topMenus = Object.entries(menuCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
     const topCustomers = Object.entries(customerStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
 
-    // --- 3. RENDER ALL CHARTS ---
-    // Line Chart (Tren)
+    // Render Charts
     const ctx = chartCanvas.getContext('2d');
     if (chartInstance) chartInstance.destroy();
     chartInstance = new Chart(ctx, {
@@ -1808,7 +1830,6 @@ async function runUIAnalysis() {
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
     });
 
-    // Bar Chart (Jam Sibuk)
     const ctxHoursEl = document.getElementById('hoursChart');
     if (ctxHoursEl) {
         const ctxH = ctxHoursEl.getContext('2d');
@@ -1820,7 +1841,6 @@ async function runUIAnalysis() {
         });
     }
 
-    // Doughnut Chart (Menu)
     const ctxMenuEl = document.getElementById('menuChart');
     if (ctxMenuEl) {
         const ctxM = ctxMenuEl.getContext('2d');
@@ -1832,7 +1852,7 @@ async function runUIAnalysis() {
         });
     }
 
-    // Tabel Pelanggan
+    // Top Customer Table
     const tableBody = document.getElementById('top-customer-table');
     if (tableBody) {
         tableBody.innerHTML = topCustomers.map((c,i) => `
