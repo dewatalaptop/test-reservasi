@@ -533,45 +533,55 @@ function renderInboxUI() {
 
 /**
  * FITUR CHAT INBOX (KONFIRMASI + TAGIHAN)
+ * Update: Menambahkan PPN 10%, Detail Bank Lengkap, dan Hitungan DP Otomatis
  */
 function prepareInboxChat(id) {
     const r = requestsCache.find(item => item.id === id);
     if (!r) { showToast("Data permintaan tidak ditemukan", "error"); return; }
 
-    let totalFood = 0;
+    let subTotal = 0;
     let orderSummary = "";
     
-    // Kalkulasi Total Harga
+    // Kalkulasi Total Harga Menu
     if (r.menus && Array.isArray(r.menus)) {
         r.menus.forEach(m => {
             let unitPrice = menuPrices[m.name] || 0;
-            let sub = unitPrice * m.quantity;
-            totalFood += sub;
-            orderSummary += `   • ${m.name} (${m.quantity}x) : Rp ${formatRupiah(sub)}\n`;
+            let lineTotal = unitPrice * m.quantity;
+            subTotal += lineTotal;
+            // Format baris menu
+            orderSummary += `- ${m.name} (${m.quantity}x) : Rp ${formatRupiah(lineTotal)}\n`;
         });
     }
     
-    // Kalkulasi DP (50% dari total)
-    let grandTotal = totalFood; 
-    let dpAmount = grandTotal > 0 ? grandTotal * 0.5 : 0; 
+    // Kalkulasi Pajak & Grand Total
+    let ppn = subTotal * 0.10; // Pajak 10%
+    let grandTotal = subTotal + ppn;
+    let dpAmount = grandTotal * 0.5; // DP 50%
 
-    // Template Pesan Profesional
-    let msg = `Halo Kak *${r.nama}* 👋,\n\n` +
-        `Terima kasih telah melakukan reservasi di *Dolan Sawah*.\n` +
-        `Kami ingin mengkonfirmasi detail pesanan Kakak sebagai berikut:\n\n` +
-        `🗓 Tanggal: *${r.date}*\n` +
-        `⏰ Jam: *${r.jam}*\n` +
-        `👥 Jumlah: *${r.jumlah} Orang*\n` +
-        `📍 Tempat: *${r.tempat}*\n\n` +
-        `🍽 *Rincian Pesanan:*\n${orderSummary || '   (Tidak ada menu spesifik)\n'}\n` +
+    // Template Pesan
+    let msg = `Halo Kak *${r.nama}* 👋,\n` +
+        `Terima kasih telah melakukan reservasi di *Dolan Sawah*.\n\n` +
+        `Berikut detail pesanan Anda:\n` +
+        `🗓 Tanggal: ${r.date}\n` +
+        `⏰ Jam: ${r.jam}\n` +
+        `👥 Jumlah: ${r.jumlah} Orang\n` +
+        `📍 Tempat: ${r.tempat}\n\n` +
+        `*Rincian Pesanan:*\n` +
+        `${orderSummary || '- (Belum ada menu spesifik)\n'}\n` +
         `----------------------------------\n` +
-        `💰 *Total Estimasi: Rp ${formatRupiah(grandTotal)}*\n` +
-        `----------------------------------\n\n` +
-        `Untuk mengamankan slot ini, mohon kesediaannya melakukan pembayaran *DP sebesar Rp ${formatRupiah(dpAmount)}*.\n\n` +
-        `Transfer dapat dilakukan ke:\n` +
-        `🏦 *BCA: 123-456-7890*\n` +
-        `a.n Dolan Sawah Management\n\n` +
-        `Mohon kirimkan bukti transfer jika sudah ya Kak. Terima kasih! 🙏`;
+        `Subtotal: Rp ${formatRupiah(subTotal)}\n` +
+        `PPN (10%): Rp ${formatRupiah(ppn)}\n` +
+        `*Total Tagihan: Rp ${formatRupiah(grandTotal)}*\n\n` +
+        `----------------------------------\n` +
+        `Untuk konfirmasi, mohon melakukan pembayaran *DP (50%)* sebesar:\n` +
+        `👉 *Rp ${formatRupiah(dpAmount)}*\n\n` +
+        `Silakan transfer ke salah satu rekening berikut:\n\n` +
+        `*Rekening Dolan Sawah*\n\n` +
+        `✅ *BCA: 0132021439*\n` +
+        `✅ *Mandiri: 1360034582244*\n` +
+        `✅ *BRI: 008101001911567*\n` +
+        `A/n Oktavianus Dwi Wahyu Widyanarka\n\n` +
+        `Mohon kirimkan bukti transfer ini untuk kami proses approve ✅. Terima kasih!`;
 
     if (!r.nomorHp) {
         showToast("Nomor HP pelanggan tidak tersedia", "error");
@@ -686,6 +696,7 @@ async function rejectRequest(id) {
         }
     }
 }
+
 // ============================================================================
 // FILE: app.js
 // BAGIAN 3: KALENDER CORE, RESERVASI LISTENER & WIDGET STATISTIK
