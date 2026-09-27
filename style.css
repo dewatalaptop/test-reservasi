@@ -377,6 +377,7 @@ button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; 
 /* Menu Selection */
 .menu-selection-row { display: flex; gap: 10px; margin-bottom: 10px; }
 .btn-del { width: 40px; background: #fee2e2; color: var(--danger); border-radius: 10px; border:none; cursor: pointer; }
+.btn-edit-sm { width: 40px; background: #e0f2fe; color: #0369a1; border-radius: 10px; border:none; cursor: pointer; }
 
 /* ==========================================================================
    9. LOGIN SCREEN

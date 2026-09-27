@@ -1424,7 +1424,10 @@ function renderManageMenuList() {
         const price = menuPrices[name] ? parseInt(menuPrices[name]) : 0;
         return `<div class="menu-item" style="padding:12px 15px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1;"><div style="font-weight:600; color:var(--text-main);">${escapeHtml(name)}</div><div style="font-size:0.85rem; color:var(--success); font-weight:600;">Rp ${formatRupiah(price)}</div><div style="font-size:0.8rem; color:#888;">${escapeHtml(detailMenu[name].join(', '))}</div></div>
-            <button class="btn-del" onclick="deleteMenu('${escapeHtml(name)}')" title="Hapus Menu"><i class="fas fa-trash"></i></button>
+            <div style="display:flex; gap:6px;">
+                <button class="btn-edit-sm" onclick="openEditMenuPopup('${escapeForJsAttr(name)}')" title="Edit Menu"><i class="fas fa-pencil-alt"></i></button>
+                <button class="btn-del" onclick="deleteMenu('${escapeForJsAttr(name)}')" title="Hapus Menu"><i class="fas fa-trash"></i></button>
+            </div>
         </div>`;
     }).join('');
 }
@@ -1455,6 +1458,69 @@ async function deleteMenu(name) {
         showToast("Menu dihapus", "success");
         await loadMenus(); renderManageMenuList();
     } catch(e) { showToast("Gagal hapus", "error"); } finally { hideLoader(); }
+}
+
+// Sama persis pola/perilaku dengan openEditMenuPopup+saveEditedMenu di
+// upgradeV2.html, supaya kedua aplikasi konsisten -- termasuk cara nama
+// menu diganti (hapus doc lama, buat doc baru, karena nama menu = ID
+// dokumen di Firestore).
+function openEditMenuPopup(name) {
+    const popup = document.getElementById('menuManagementPopup');
+    const currentPrice = menuPrices[name] ? parseInt(menuPrices[name]) : 0;
+    const currentDetails = (detailMenu[name] || []).join(', ');
+
+    popup.innerHTML = `
+      <div class="popup-header" style="padding: 20px; background: var(--primary); color: white; display: flex; justify-content: space-between;">
+          <h3 style="margin:0;"><i class="fas fa-pencil-alt"></i> Edit Menu</h3>
+          <button class="close-popup-btn" onclick="closePopup('menuManagementPopup')" style="background:none; border:none; color:white; font-size:1.5rem;">&times;</button>
+      </div>
+      <div class="popup-content" style="padding:20px;">
+          <div style="background:#fff7ed; border:1px solid #fcd34d; border-radius:8px; padding:8px 12px; margin-bottom:14px; font-size:0.78rem; color:#92400e;">
+              <i class="fas fa-triangle-exclamation"></i> Mengubah nama menu TIDAK memperbarui reservasi lama yang sudah memakai nama lama -- reservasi tersebut tetap menyimpan nama lamanya.
+          </div>
+          <label style="display:block; margin-bottom:10px; font-size:0.85rem; font-weight:600; color:var(--text-main);">Nama Menu
+              <input type="text" id="editingMenuName" class="glass-input" value="${escapeHtml(name)}" style="margin-top:4px;">
+          </label>
+          <label style="display:block; margin-bottom:10px; font-size:0.85rem; font-weight:600; color:var(--text-main);">Harga (Rp)
+              <input type="number" id="editingMenuPrice" class="glass-input" value="${currentPrice}" style="margin-top:4px;">
+          </label>
+          <label style="display:block; margin-bottom:10px; font-size:0.85rem; font-weight:600; color:var(--text-main);">Rincian isi menu (pisahkan koma)
+              <textarea id="editingMenuDetails" class="glass-input" style="margin-top:4px; min-height:80px;">${escapeHtml(currentDetails)}</textarea>
+          </label>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+              <button class="btn-primary-gradient full-width" onclick="saveEditedMenu('${escapeForJsAttr(name)}')"><i class="fas fa-save"></i> Simpan</button>
+              <button class="glass-input" style="cursor:pointer;" onclick="showMenuManagement()">Batal</button>
+          </div>
+      </div>`;
+}
+
+async function saveEditedMenu(originalName) {
+    const newName = document.getElementById('editingMenuName').value.trim();
+    const newPriceVal = document.getElementById('editingMenuPrice').value;
+    const newDetails = document.getElementById('editingMenuDetails').value.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (!newName) { showToast("Nama menu tidak boleh kosong", "error"); return; }
+    const newPrice = newPriceVal ? parseInt(newPriceVal) : 0;
+
+    showLoader();
+    try {
+        if (originalName !== newName) {
+            if (detailMenu[newName]) {
+                showToast("Nama menu sudah digunakan", "error");
+                hideLoader();
+                return;
+            }
+            await db.collection('menus').doc(originalName).delete();
+        }
+        await db.collection('menus').doc(newName).set({ details: newDetails, price: newPrice });
+        showToast(`Menu "${newName}" berhasil diperbarui`, "success");
+        await loadMenus();
+        showMenuManagement();
+    } catch (e) {
+        showToast("Gagal menyimpan perubahan menu", "error");
+    } finally {
+        hideLoader();
+    }
 }
 
 function showLocationManagement() {
@@ -1656,11 +1722,27 @@ function executePrint() {
         const showKontak = document.getElementById('print-kontak').checked;
         const showDp = document.getElementById('print-dp').checked;
         const showNote = document.getElementById('print-tambahan').checked;
+        const showHarga = document.getElementById('print-harga').checked;
 
         const sortedList = [...list].sort((a,b) => (a[sortBy] || '').toString().toLowerCase().localeCompare((b[sortBy] || '').toString().toLowerCase()));
 
+        // Ringkasan harian -- selalu disertakan, terlepas dari toggle detail di
+        // atas, supaya laporan selalu punya angka total yang bisa dipertanggung-
+        // jawabkan (jumlah reservasi/pax selalu benar; DP terkumpul & estimasi
+        // omset masing-masing ikut toggle showDp/showHarga karena keduanya
+        // ANGKA UANG yang sama seperti kolom detailnya).
+        const totalPax = sortedList.reduce((s, r) => s + (parseInt(r.jumlah) || 0), 0);
+        const totalDp = sortedList.reduce((s, r) => s + (parseFloat(r.dp) || 0), 0);
+        const totalOmset = sortedList.reduce((s, r) => s + getReservationOrderTotal(r), 0);
+        const summaryHtml = `<div class="print-summary">
+            <div class="print-summary-item"><span>Jumlah Reservasi</span><b>${sortedList.length}</b></div>
+            <div class="print-summary-item"><span>Total Pax</span><b>${totalPax}</b></div>
+            ${showDp ? `<div class="print-summary-item"><span>DP Terkumpul</span><b>Rp ${formatRupiah(totalDp)}</b></div>` : ''}
+            ${showHarga ? `<div class="print-summary-item"><span>Estimasi Omset</span><b>Rp ${formatRupiah(totalOmset)}</b></div>` : ''}
+        </div>`;
+
         let contentHtml = '';
-        
+
         if (format === 'table') {
             const rows = sortedList.map((r, i) => {
                 let menuStr = '-';
@@ -1669,7 +1751,11 @@ function executePrint() {
                         menuStr = r.menus.map(m => {
                             const details = detailMenu[m.name] || [];
                             const detailStr = details.length > 0 ? `<br><span style="color:#555; font-size:0.85em;">(${details.join(', ')})</span>` : '';
-                            return `${m.quantity}x ${m.name}${detailStr}`;
+                            const priceStr = showHarga ? (() => {
+                                const price = (typeof m.price === 'number') ? m.price : (menuPrices[m.name] || 0);
+                                return ` <span style="color:#666;">— Rp ${formatRupiah(price)} x ${m.quantity} = Rp ${formatRupiah(price * (parseInt(m.quantity)||0))}</span>`;
+                            })() : '';
+                            return `${m.quantity}x ${m.name}${priceStr}${detailStr}`;
                         }).join('<br>');
                     } else if (r.menu) {
                         menuStr = r.menu;
@@ -1682,21 +1768,26 @@ function executePrint() {
                     <td style="text-align:center;">${r.jumlah}</td>
                     <td>${escapeHtml(r.tempat)}</td>
                     ${showMenu ? `<td>${menuStr}</td>` : ''}
+                    ${showHarga ? `<td style="text-align:right;">Rp ${formatRupiah(getReservationOrderTotal(r))}</td>` : ''}
                     ${showDp ? `<td>${r.dp > 0 ? formatRupiah(r.dp) : 'Belum'}</td>` : ''}
                     ${showNote ? `<td>${escapeHtml(r.tambahan||'-')}</td>` : ''}
                 </tr>`;
             }).join('');
 
-            contentHtml = `<table class="print-table"><thead><tr><th>No</th><th>Jam</th><th>Nama</th><th>Pax</th><th>Tempat</th>${showMenu?'<th>Menu</th>':''}${showDp?'<th>DP</th>':''}${showNote?'<th>Catatan</th>':''}</tr></thead><tbody>${rows}</tbody></table>`;
+            contentHtml = summaryHtml + `<table class="print-table"><thead><tr><th>No</th><th>Jam</th><th>Nama</th><th>Pax</th><th>Tempat</th>${showMenu?'<th>Menu</th>':''}${showHarga?'<th>Total</th>':''}${showDp?'<th>DP</th>':''}${showNote?'<th>Catatan</th>':''}</tr></thead><tbody>${rows}</tbody></table>`;
         } else {
-            contentHtml = `<div class="print-grid">` + sortedList.map((r, i) => {
+            contentHtml = summaryHtml + `<div class="print-grid">` + sortedList.map((r, i) => {
                 let menuHtml = '';
                 if (showMenu) {
                     if (r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
                         const items = r.menus.map(m => {
                             const details = detailMenu[m.name] || [];
                             const detailStr = details.length > 0 ? `<div style="font-size:10px; color:#555; margin-left:15px; margin-top:2px;">- ${details.join(', ')}</div>` : '';
-                            return `<div style="margin-bottom:4px;"><b>${m.quantity}x</b> ${escapeHtml(m.name)}${detailStr}</div>`;
+                            const priceStr = showHarga ? (() => {
+                                const price = (typeof m.price === 'number') ? m.price : (menuPrices[m.name] || 0);
+                                return ` <span style="color:#666; font-weight:400;">(Rp ${formatRupiah(price)} x ${m.quantity})</span>`;
+                            })() : '';
+                            return `<div style="margin-bottom:4px;"><b>${m.quantity}x</b> ${escapeHtml(m.name)}${priceStr}${detailStr}</div>`;
                         }).join('');
                         menuHtml = `<div class="print-menu-box">${items}</div>`;
                     } else if (r.menu) {
@@ -1711,7 +1802,8 @@ function executePrint() {
                         ${menuHtml}
                         </div>
                     </div>
-                    <div>${showDp?`<div class="pc-dp">${r.dp>0?`DP: ${formatRupiah(r.dp)}`:'BELUM DP'}</div>`:''}
+                    <div>${showHarga?`<div class="pc-total">Total: Rp ${formatRupiah(getReservationOrderTotal(r))}</div>`:''}
+                         ${showDp?`<div class="pc-dp">${r.dp>0?`DP: ${formatRupiah(r.dp)}`:'BELUM DP'}</div>`:''}
                          ${showNote&&r.tambahan?`<div class="pc-note">${escapeHtml(r.tambahan)}</div>`:''}
                     </div>
                 </div>`;
@@ -1732,7 +1824,12 @@ function executePrint() {
                 .pc-name { font-weight:bold; font-size:14px; } .pc-meta { font-size:11px; } .pc-meta-row { font-weight:bold; font-size:11px; display:flex; gap:10px; }
                 .print-menu-box { background:#eee; padding:5px; font-size:10px; margin-top:5px; border:1px dashed #999; }
                 .pc-dp { text-align:right; font-weight:bold; font-size:11px; border-top:1px solid #eee; margin-top:5px; }
+                .pc-total { text-align:right; font-weight:bold; font-size:11px; }
                 .pc-note { font-style:italic; font-size:10px; background:#ffc; }
+                .print-summary { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+                .print-summary-item { flex:1; min-width:110px; border:1px solid #000; border-radius:5px; padding:8px 10px; text-align:center; }
+                .print-summary-item span { display:block; font-size:9px; text-transform:uppercase; letter-spacing:0.05em; color:#555; }
+                .print-summary-item b { display:block; font-size:14px; margin-top:2px; }
                 @media print { .print-grid { grid-template-columns: 1fr 1fr; } }
             </style>
             </head><body>
@@ -1938,6 +2035,21 @@ function formatRupiah(amount) {
     if (amount === null || amount === undefined || isNaN(amount)) return '0';
     return Number(amount).toLocaleString('id-ID');
 }
+// Sama persis dengan getReservationOrderTotal di upgradeV2.html: harga custom
+// yang menempel langsung di item (item.price) didahulukan di atas harga
+// master menu -- kalau tidak, menu "Custom"/admin-added akan salah dihitung
+// Rp0 (lihat perbaikan ds-information-board.html untuk bug yang sama).
+function getReservationOrderTotal(r) {
+    if (typeof r.orderTotal === 'number') return r.orderTotal;
+    if (Array.isArray(r.menus) && r.menus.length > 0) {
+        return r.menus.reduce((sum, item) => {
+            const price = (typeof item.price === 'number') ? item.price : (menuPrices[item.name] || 0);
+            return sum + price * (parseInt(item.quantity) || 0);
+        }, 0);
+    }
+    if (r.menu) { return menuPrices[r.menu] || 0; }
+    return 0;
+}
 function cleanPhoneNumber(phone) { 
     if (!phone) return '';
     return phone.toString().replace(/[^0-9]/g, ''); 
@@ -1949,6 +2061,21 @@ function isValidPhone(phone) {
 function escapeHtml(text) {
   if (!text) return text;
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+// Untuk data yang disisipkan ke dalam onclick="fn('...')" -- escapeHtml saja
+// TIDAK cukup di sini: ia meng-escape ke entity HTML, bukan ke string JS, jadi
+// nama menu yang mengandung tanda kutip (mis. "Chef's Special") tetap merusak
+// atribut onclick. Sama persis dengan escapeForJsAttr di upgradeV2.html.
+function escapeForJsAttr(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, ' ')
+    .replace(/\r/g, '');
 }
 function showToast(message, type = 'success') {
     let icon = type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
