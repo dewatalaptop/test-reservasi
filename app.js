@@ -23,6 +23,8 @@ if (!firebase.apps.length) {
 }
 
 const db = firebase.firestore();
+// Cache offline: data terakhir tetap terbaca saat sinyal putus, tulisan menyusul saat online lagi.
+db.enablePersistence({ synchronizeTabs: true }).catch(e => console.warn("Cache offline tidak aktif:", e.code));
 const auth = firebase.auth();
 
 // Set persistensi login (agar tidak logout saat refresh)
@@ -242,8 +244,8 @@ function handleLogin() {
     .finally(() => hideLoader());
 }
 
-function handleLogout() { 
-    if(confirm("Yakin ingin keluar dari sistem?")) {
+async function handleLogout() {
+    if (await confirmDialog("Keluar?", "Yakin ingin keluar dari sistem?", "Ya, keluar")) {
         showLoader();
         auth.signOut().then(() => {
             location.reload();
@@ -1494,7 +1496,7 @@ async function addNewMenu() {
 }
 
 async function deleteMenu(name) {
-    if(!confirm(`Hapus menu "${name}"?`)) return;
+    if (!(await confirmDialog("Hapus menu?", `Menu "${name}" akan dihapus. Reservasi lama tetap menyimpan namanya.`, "Ya, hapus"))) return;
     showLoader();
     try {
         await db.collection('menus').doc(name).delete();
@@ -1595,7 +1597,7 @@ function renderManageLocList() {
     listEl.innerHTML = Object.entries(locationsData).sort(([,a], [,b]) => a.name.localeCompare(b.name)).map(([docId, data]) => `
         <div class="menu-item" style="padding:12px 15px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1;"><div style="font-weight:600; color:var(--text-main);">${escapeHtml(data.name)}</div><small style="color:#666;">Kapasitas Max: ${escapeHtml(data.capacity)} orang</small></div>
-            <button class="btn-del" onclick="deleteLocation('${escapeForJsAttr(docId)}')"><i class="fas fa-trash"></i></button>
+            <button class="btn-del" onclick="deleteLocation('${escapeForJsAttr(docId)}')" title="Hapus Tempat"><i class="fas fa-trash"></i></button>
         </div>`
     ).join('');
 }
@@ -1618,7 +1620,7 @@ async function addNewLocation() {
 }
 
 async function deleteLocation(docId) {
-    if(!confirm("Hapus lokasi ini?")) return;
+    if (!(await confirmDialog("Hapus tempat?", "Tempat ini akan dihapus dari daftar.", "Ya, hapus"))) return;
     showLoader();
     try {
         await db.collection('locations').doc(docId).delete();
@@ -2050,10 +2052,16 @@ async function runUIAnalysis(force) {
  */
 document.addEventListener('DOMContentLoaded', () => applySavedBackground());
 
+// Hanya https, tanpa kutip/kurung/spasi agar tidak bisa keluar dari url('...')
+function safeBgUrl(u) {
+    try { const x = new URL(u); return (x.protocol === 'https:' && !/['"()\\\s]/.test(u)) ? x.href : ''; } catch (e) { return ''; }
+}
 function saveCustomBackground() {
     const url = document.getElementById('bgUrlInput').value.trim();
     if (!url) return showToast("URL kosong", "error");
-    localStorage.setItem(BG_STORAGE_KEY, url); applySavedBackground(); showToast("Background diganti", "success");
+    const safe = safeBgUrl(url);
+    if (!safe) return showToast("URL harus https dan tanpa tanda kutip/kurung.", "error");
+    localStorage.setItem(BG_STORAGE_KEY, safe); applySavedBackground(); showToast("Background diganti", "success");
 }
 function resetBackground() { localStorage.removeItem(BG_STORAGE_KEY); applySavedBackground(); showToast("Reset default"); }
 function setBgFromPreset(el) {
@@ -2064,7 +2072,7 @@ function setBgFromPreset(el) {
 function applySavedBackground() {
     const saved = localStorage.getItem(BG_STORAGE_KEY);
     const root = document.documentElement;
-    if (saved) root.style.setProperty('--bg-image', `url('${saved}')`);
+    if (safeBgUrl(saved || '')) root.style.setProperty('--bg-image', `url('${safeBgUrl(saved)}')`);
     else root.style.setProperty('--bg-image', "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232&auto=format&fit=crop')");
 }
 
@@ -2276,6 +2284,10 @@ function showToast(message, type = 'success') {
         setTimeout(() => { toast.style.display = 'none'; }, 300);
     }, 3500);
 }
+async function confirmDialog(title, text, okLabel) {
+    const r = await Swal.fire({ title, text, icon: 'warning', showCancelButton: true, confirmButtonText: okLabel || 'Ya', cancelButtonText: 'Batal', confirmButtonColor: '#ef4444', cancelButtonColor: '#94a3b8' });
+    return r.isConfirmed;
+}
 function showLoader() { if (loadingOverlay) loadingOverlay.style.display = 'flex'; }
 function hideLoader() { if (loadingOverlay) loadingOverlay.style.display = 'none'; }
 function closePopup(popupId) {
@@ -2296,5 +2308,41 @@ window.addEventListener('click', () => {
     const d = document.getElementById('notification-dropdown'); 
     if(d) d.style.display = 'none'; 
 });
+
+/**
+ * 23. AKSESIBILITAS & INTERAKSI DASAR
+ * - tombol ikon mendapat aria-label dari title
+ * - elemen div yang bisa diklik bisa dijangkau keyboard (Tab, Enter, Spasi)
+ * - Enter pada form login = Masuk
+ */
+(function initA11y() {
+    const CLICKABLE = '.nav-item, .notif-icon, #notification-bell-container, .stat-card.clickable, .notification-item, .theme-option';
+    const fixLabels = root => {
+        if (!root.querySelectorAll) return;
+        const all = [root, ...root.querySelectorAll('button, ' + CLICKABLE)];
+        all.forEach(el => {
+            if (!el.matches) return;
+            if (el.matches('button') && !el.hasAttribute('aria-label')) {
+                const label = el.getAttribute('title') || (el.textContent.trim() === '\u00d7' ? 'Tutup' : '');
+                if (label) el.setAttribute('aria-label', label);
+            }
+            if (el.matches(CLICKABLE) && !el.hasAttribute('tabindex')) { el.setAttribute('tabindex', '0'); el.setAttribute('role', 'button'); }
+        });
+    };
+    fixLabels(document);
+    new MutationObserver(muts => muts.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1) fixLabels(n); })))
+        .observe(document.body, { childList: true, subtree: true });
+
+    document.addEventListener('keydown', e => {
+        if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[role="button"][onclick]') && e.target.tagName !== 'BUTTON') {
+            e.preventDefault();
+            e.target.click();
+        }
+    });
+    ['loginEmail', 'loginPassword'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+    });
+})();
 
 console.log("Dolan Sawah App Loaded: Ultimate Edition (Modular Uncompressed).");

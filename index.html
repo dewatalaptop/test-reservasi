@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <meta name="theme-color" content="#059669"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
   <title>Dolan Sawah Manager - Ultimate Edition</title>
@@ -14,8 +14,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.8/dist/sweetalert2.all.min.js" integrity="sha384-26j4cFQoN0CRqI+nXAEeV3E2O9VkYqOJJGH+DQSQIBD0LfvCjUBDqXxi5feRZ0dn" crossorigin="anonymous"></script>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -110,7 +110,7 @@
         <div style="display:flex; align-items:center; gap:10px;">
             <i class="fas fa-seedling"></i> <span>Dolan Sawah</span>
         </div>
-        <button class="close-sidebar-mobile" onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; display:none;">
+        <button class="close-sidebar-mobile" aria-label="Tutup menu" onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; display:none;">
             <i class="fas fa-times"></i>
         </button>
       </div>
@@ -189,9 +189,9 @@
         <div class="glass-panel calendar-wrapper">
             <div class="calendar-header-custom">
                 <div class="cal-nav-group">
-                    <button onclick="previousMonth()"><i class="fas fa-chevron-left"></i></button>
+                    <button onclick="previousMonth()" aria-label="Bulan sebelumnya"><i class="fas fa-chevron-left"></i></button>
                     <div class="month-label" id="monthYear">...</div>
-                    <button onclick="nextMonth()"><i class="fas fa-chevron-right"></i></button>
+                    <button onclick="nextMonth()" aria-label="Bulan berikutnya"><i class="fas fa-chevron-right"></i></button>
                 </div>
                 <button class="btn-today" onclick="goToToday()">Hari Ini</button>
             </div>

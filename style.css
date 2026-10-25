@@ -566,3 +566,7 @@ button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; 
     max-width: 100%;
     overflow: hidden;
 }
+
+/* Fokus keyboard terlihat; kartu inbox punya ruang dalam */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.request-card { padding: 18px; }
