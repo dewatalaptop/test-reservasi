@@ -69,7 +69,22 @@ let promoMessageCache = null;
 let allCustomersCache = [];      // Cache kontak untuk Broadcast
 
 const BROADCAST_MESSAGE_KEY = 'dolanSawahBroadcastMessage'; 
-const BG_STORAGE_KEY = 'dolanSawahBg'; 
+const BG_STORAGE_KEY = 'dolanSawahBg';
+
+// Pengaturan tagihan (PPN, persen DP, rekening). Bawaan di bawah; bisa diubah dari
+// menu Pengaturan dan disimpan di Firestore: settings/business.
+const DEFAULT_BUSINESS_CONFIG = {
+    ppnPercent: 10,
+    dpPercent: 50,
+    accountName: 'Oktavianus Dwi Wahyu Widyanarka',
+    banks: [
+        { name: 'BCA', number: '0132021439' },
+        { name: 'Mandiri', number: '1360034582244' },
+        { name: 'BRI', number: '008101001911567' }
+    ]
+};
+let businessConfig = JSON.parse(JSON.stringify(DEFAULT_BUSINESS_CONFIG));
+let allReservationsCacheAt = 0; // kapan cache analisis terakhir diisi 
 
 // --- Referensi DOM Global ---
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -150,6 +165,7 @@ function initializeApp() {
     // 3. Load Data Master (Menu & Lokasi) di Background
     loadMenus().catch(e => console.warn("Menu load bg error:", e));
     loadLocations().catch(e => console.warn("Loc load bg error:", e));
+    loadBusinessConfig();
     
   } catch (e) {
     console.error("Critical Init Error:", e);
@@ -287,6 +303,8 @@ function switchTab(tabId) {
         if(sb && sb.classList.contains('open')) toggleSidebar();
     }
     
+    if (tabId === 'settings') renderBusinessSettings();
+
     // Trigger Lazy Load untuk Analysis
     if(tabId === 'analysis' && typeof runUIAnalysis === 'function') {
         if(typeof initAnalysisFilters === 'function') initAnalysisFilters();
@@ -556,9 +574,9 @@ function prepareInboxChat(id) {
     }
     
     // Kalkulasi Pajak & Grand Total
-    let ppn = subTotal * 0.10; // Pajak 10%
+    let ppn = subTotal * (businessConfig.ppnPercent / 100);
     let grandTotal = subTotal + ppn;
-    let dpAmount = grandTotal * 0.5; // DP 50%
+    let dpAmount = grandTotal * (businessConfig.dpPercent / 100);
 
     // Template Pesan
     let msg = `Halo Kak *${r.nama}* 👋,\n` +
@@ -572,17 +590,17 @@ function prepareInboxChat(id) {
         `${orderSummary || '- (Belum ada menu spesifik)\n'}\n` +
         `----------------------------------\n` +
         `Subtotal: Rp ${formatRupiah(subTotal)}\n` +
-        `PPN (10%): Rp ${formatRupiah(ppn)}\n` +
+        `PPN (${businessConfig.ppnPercent}%): Rp ${formatRupiah(ppn)}\n` +
         `*Total Tagihan: Rp ${formatRupiah(grandTotal)}*\n\n` +
         `----------------------------------\n` +
-        `Untuk konfirmasi, mohon melakukan pembayaran *DP (50%)* sebesar:\n` +
+        `Untuk konfirmasi, mohon melakukan pembayaran *DP (${businessConfig.dpPercent}%)* sebesar:\n` +
         `👉 *Rp ${formatRupiah(dpAmount)}*\n\n` +
         `Silakan transfer ke salah satu rekening berikut:\n\n` +
         `*Rekening Dolan Sawah*\n\n` +
-        `✅ *BCA: 0132021439*\n` +
-        `✅ *Mandiri: 1360034582244*\n` +
-        `✅ *BRI: 008101001911567*\n` +
-        `A/n Oktavianus Dwi Wahyu Widyanarka\n\n` +
+        
+        
+        
+        bankInfoText() +
         `Mohon kirimkan bukti transfer ini untuk kami proses approve ✅. Terima kasih!`;
 
     if (!r.nomorHp) {
@@ -600,6 +618,7 @@ function prepareInboxChat(id) {
 async function approveRequest(id) {
     const req = requestsCache.find(r => r.id === id);
     if(!req) return;
+    if (!(await confirmCapacity(req.date, req.tempat, parseInt(req.jumlah) || 0))) return;
 
     // Tampilkan Dialog Input DP & Metode Bayar
     const { value: formValues } = await Swal.fire({
@@ -1240,6 +1259,7 @@ async function simpanReservasi() {
   
   const dateInput = document.getElementById('inputDate').value;
   if (!dateInput) return showToast("Tanggal wajib diisi!", "error");
+  if (!(await confirmCapacity(dateInput, formData.tempat, formData.jumlah))) return;
   
   showLoader();
   try {
@@ -1257,6 +1277,8 @@ async function simpanPerubahanReservasi() {
   const formData = await validateAndGetFormData('edit-reservation-form');
   if (!formData) return;
   
+  const orig = findReservationById(id);
+  if (orig && !(await confirmCapacity(orig.date, formData.tempat, formData.jumlah, id))) return;
   showLoader();
   try {
     // Total tersimpan (orderTotal) jadi basi bila menu berubah -> hapus agar dihitung ulang dari item
@@ -1333,6 +1355,9 @@ async function validateAndGetFormData(formId) {
             }
         }
     }
+
+    const hpRaw = form.querySelector('#nomorHp').value.trim();
+    if (hpRaw && !isValidPhone(hpRaw)) setError('nomorHp', 'Nomor HP tidak valid');
 
     const menus = [];
     form.querySelectorAll('.menu-selection-row').forEach(row => {
@@ -1780,7 +1805,7 @@ function executePrint() {
             <div class="print-summary-item"><span>Jumlah Reservasi</span><b>${sortedList.length}</b></div>
             <div class="print-summary-item"><span>Total Pax</span><b>${totalPax}</b></div>
             ${showDp ? `<div class="print-summary-item"><span>DP Terkumpul</span><b>Rp ${formatRupiah(totalDp)}</b></div>` : ''}
-            ${showHarga ? `<div class="print-summary-item"><span>Estimasi Omset</span><b>Rp ${formatRupiah(totalOmset)}</b></div>` : ''}
+            ${showHarga ? `<div class="print-summary-item"><span>Estimasi Omset (sebelum PPN)</span><b>Rp ${formatRupiah(totalOmset)}</b></div>` : ''}
         </div>`;
 
         let contentHtml = '';
@@ -1902,15 +1927,15 @@ function initAnalysisFilters() {
     }
 }
 
-async function runUIAnalysis() {
+async function runUIAnalysis(force) {
     const chartCanvas = document.getElementById('mainChart');
     if (!chartCanvas) return;
 
-    if (!allReservationsCache) {
+    if (!allReservationsCache || force || Date.now() - allReservationsCacheAt > 300000) {
         showLoader();
         try { 
             const snap = await db.collection('reservations').get(); 
-            allReservationsCache = snap.docs.map(d => d.data()); 
+            allReservationsCache = snap.docs.map(d => d.data()); allReservationsCacheAt = Date.now();
         } catch (e) { 
             hideLoader(); return; 
         }
@@ -1924,14 +1949,15 @@ async function runUIAnalysis() {
 
     const filteredData = allReservationsCache.filter(r => {
         if (!r.date) return false;
-        const d = new Date(r.date);
-        const matchYear = d.getFullYear() === selectedYear;
-        const matchMonth = selectedMonth === 'all' ? true : d.getMonth() === selectedMonth;
+        const y = parseInt(r.date.slice(0, 4), 10), m = parseInt(r.date.slice(5, 7), 10) - 1;
+        const matchYear = y === selectedYear;
+        const matchMonth = selectedMonth === 'all' ? true : m === selectedMonth;
         return matchYear && matchMonth;
     });
 
     // KPI
-    const totalRevenue = filteredData.reduce((acc, curr) => acc + (parseInt(curr.dp)||0), 0);
+    const totalRevenue = filteredData.reduce((acc, curr) => acc + getReservationOrderTotal(curr), 0); // nilai pesanan (sebelum PPN)
+    const totalDp = filteredData.reduce((acc, curr) => acc + (parseInt(curr.dp)||0), 0);
     const totalPax = filteredData.reduce((acc, curr) => acc + (parseInt(curr.jumlah)||0), 0);
     const totalTrans = filteredData.length;
     const aov = totalTrans > 0 ? Math.round(totalRevenue / totalTrans) : 0;
@@ -1939,37 +1965,39 @@ async function runUIAnalysis() {
     document.getElementById('stat-kpi-revenue').textContent = `Rp ${formatRupiah(totalRevenue)}`;
     document.getElementById('stat-kpi-pax').textContent = totalPax;
     document.getElementById('stat-kpi-aov').textContent = `Rp ${formatRupiah(aov)}`;
-    document.getElementById('stat-kpi-cancel').textContent = "0%"; 
+    document.getElementById('stat-kpi-dp').textContent = `Rp ${formatRupiah(totalDp)}`;
 
     // Charts Data
     let labels = [], dataPoints = [];
     if (selectedMonth === 'all') {
         labels = monthNames.map(m => m.substr(0,3));
         dataPoints = Array(12).fill(0);
-        filteredData.forEach(r => { dataPoints[new Date(r.date).getMonth()]++; });
+        filteredData.forEach(r => { dataPoints[parseInt(r.date.slice(5, 7), 10) - 1]++; });
     } else {
         const days = new Date(selectedYear, selectedMonth + 1, 0).getDate();
         labels = Array.from({length: days}, (_, i) => (i+1).toString());
         dataPoints = Array(days).fill(0);
-        filteredData.forEach(r => { dataPoints[new Date(r.date).getDate() - 1]++; });
+        filteredData.forEach(r => { dataPoints[parseInt(r.date.slice(8, 10), 10) - 1]++; });
     }
 
     const hoursCounts = {}, menuCounts = {}, customerStats = {};
     filteredData.forEach(r => {
         if (r.jam) { const h = r.jam.split(':')[0]; hoursCounts[h] = (hoursCounts[h] || 0) + 1; }
         if (r.menus && Array.isArray(r.menus)) {
-            r.menus.forEach(m => { menuCounts[m.name] = (menuCounts[m.name] || 0) + m.quantity; });
+            r.menus.forEach(m => { menuCounts[m.name] = (menuCounts[m.name] || 0) + (parseInt(m.quantity) || 0); });
         } else if (r.menu) {
             menuCounts[r.menu] = (menuCounts[r.menu] || 0) + 1;
         }
         const name = r.nama ? r.nama.trim() : 'Tanpa Nama';
-        customerStats[name] = (customerStats[name] || 0) + 1;
+        const key = cleanPhoneNumber(r.nomorHp) || name.toLowerCase();
+        const cs = customerStats[key] || (customerStats[key] = { name, n: 0 });
+        cs.n++;
     });
 
     const sortedHours = Object.keys(hoursCounts).sort();
     const hoursData = sortedHours.map(h => hoursCounts[h]);
     const topMenus = Object.entries(menuCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
-    const topCustomers = Object.entries(customerStats).sort((a,b) => b[1] - a[1]).slice(0, 10);
+    const topCustomers = Object.values(customerStats).sort((a,b) => b.n - a.n).slice(0, 10);
 
     // Render Charts
     const ctx = chartCanvas.getContext('2d');
@@ -2007,8 +2035,8 @@ async function runUIAnalysis() {
     if (tableBody) {
         tableBody.innerHTML = topCustomers.map((c,i) => `
             <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:10px; font-weight:600;">${i+1}. ${escapeHtml(c[0])}</td>
-                <td style="padding:10px; text-align:center;"><span class="pill" style="background:#f3f4f6;">${c[1]}x</span></td>
+                <td style="padding:10px; font-weight:600;">${i+1}. ${escapeHtml(c.name)}</td>
+                <td style="padding:10px; text-align:center;"><span class="pill" style="background:#f3f4f6;">${c.n}x</span></td>
             </tr>
         `).join('');
     }
@@ -2125,9 +2153,92 @@ function pickRequestFields(req) {
     return { date, jam, jumlah, nama, tempat, menus,
              nomorHp: cleanPhoneNumber(str(req.nomorHp, 20)), tambahan: str(req.tambahan, 1000) };
 }
-function cleanPhoneNumber(phone) { 
+// ---- Pengaturan tagihan -----------------------------------------------------
+function sanitizeBusinessConfig(d) {
+    const def = DEFAULT_BUSINESS_CONFIG;
+    const pct = (v, fb) => { const n = Number(v); return (isFinite(n) && n >= 0 && n <= 100) ? n : fb; };
+    const banks = Array.isArray(d && d.banks)
+        ? d.banks.map(b => ({ name: String((b && b.name) || '').trim().slice(0, 30), number: String((b && b.number) || '').trim().slice(0, 40) }))
+                 .filter(b => b.name && /^[0-9 .-]{4,40}$/.test(b.number))
+        : [];
+    return {
+        ppnPercent: pct(d && d.ppnPercent, def.ppnPercent),
+        dpPercent: pct(d && d.dpPercent, def.dpPercent),
+        accountName: String((d && d.accountName) || def.accountName).trim().slice(0, 80) || def.accountName,
+        banks: banks.length ? banks : def.banks
+    };
+}
+
+async function loadBusinessConfig() {
+    try {
+        const snap = await db.collection('settings').doc('business').get();
+        if (snap.exists) businessConfig = sanitizeBusinessConfig(snap.data());
+    } catch (e) { console.warn("Pengaturan tagihan: pakai bawaan.", e); }
+    renderBusinessSettings();
+}
+
+function renderBusinessSettings() {
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set('cfgPpn', businessConfig.ppnPercent);
+    set('cfgDp', businessConfig.dpPercent);
+    set('cfgAccountName', businessConfig.accountName);
+    set('cfgBanks', businessConfig.banks.map(b => b.name + ': ' + b.number).join('\n'));
+}
+
+async function saveBusinessSettings() {
+    const lines = document.getElementById('cfgBanks').value.split('\n').map(s => s.trim()).filter(Boolean);
+    const banks = lines.map(l => { const i = l.indexOf(':'); return { name: l.slice(0, i).trim(), number: l.slice(i + 1).trim() }; });
+    const cfg = {
+        ppnPercent: Number(document.getElementById('cfgPpn').value),
+        dpPercent: Number(document.getElementById('cfgDp').value),
+        accountName: document.getElementById('cfgAccountName').value,
+        banks
+    };
+    const bankOk = banks.length > 0 && banks.every(b => b.name && /^[0-9 .-]{4,40}$/.test(b.number));
+    if (!bankOk) return showToast("Format rekening: 'Nama Bank: nomor' per baris.", "error");
+    if (!(cfg.ppnPercent >= 0 && cfg.ppnPercent <= 100 && cfg.dpPercent >= 0 && cfg.dpPercent <= 100)) return showToast("PPN dan DP harus 0-100.", "error");
+    if (!cfg.accountName.trim()) return showToast("Nama pemilik rekening wajib diisi.", "error");
+    showLoader();
+    try {
+        const clean = sanitizeBusinessConfig(cfg);
+        await db.collection('settings').doc('business').set(clean);
+        businessConfig = clean;
+        showToast("Pengaturan tagihan disimpan.", "success");
+    } catch (e) { console.error(e); showToast("Gagal menyimpan (cek aturan Firestore untuk koleksi settings).", "error"); }
+    finally { hideLoader(); }
+}
+
+function bankInfoText() {
+    return businessConfig.banks.map(b => `✅ *${b.name}: ${b.number}*\n`).join('') + `A/n ${businessConfig.accountName}\n\n`;
+}
+
+// ---- Kapasitas --------------------------------------------------------------
+// Jumlah tamu yang sudah ada pada tanggal+tempat yang sama dijumlahkan (sama seperti form publik);
+// bila melebihi kapasitas, admin ditanya dulu. Gagal baca = jangan menghalangi.
+async function confirmCapacity(date, tempat, jumlah, excludeId) {
+    try {
+        const loc = Object.values(locationsData).find(l => l.name === tempat);
+        if (!loc || !loc.capacity || !date) return true;
+        const snap = await db.collection('reservations').where('date', '==', date).get();
+        let used = 0;
+        snap.forEach(d => { const x = d.data(); if (d.id !== excludeId && x.tempat === tempat) used += parseInt(x.jumlah) || 0; });
+        if (used + jumlah <= loc.capacity) return true;
+        const res = await Swal.fire({
+            icon: 'warning', title: 'Kapasitas terlampaui',
+            text: `${tempat} pada ${date}: sudah ${used} + ${jumlah} baru = ${used + jumlah} dari kapasitas ${loc.capacity}. Tetap lanjutkan?`,
+            showCancelButton: true, confirmButtonText: 'Tetap lanjutkan', cancelButtonText: 'Batal', confirmButtonColor: '#d97706'
+        });
+        return res.isConfirmed;
+    } catch (e) { console.warn("Cek kapasitas dilewati:", e); return true; }
+}
+
+// Nomor HP -> format internasional tanpa '+': 0812.. / 812.. / +62812.. -> 62812..
+function cleanPhoneNumber(phone) {
     if (!phone) return '';
-    return phone.toString().replace(/[^0-9]/g, ''); 
+    let d = phone.toString().replace(/[^0-9]/g, '');
+    if (d.startsWith('0')) d = '62' + d.slice(1);
+    else if (d.startsWith('8')) d = '62' + d;
+    return d;
 }
 function isValidPhone(phone) { 
     const cleaned = cleanPhoneNumber(phone);

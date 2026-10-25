@@ -348,7 +348,7 @@
                     </select>
                     <select id="anl-year-ui" onchange="runUIAnalysis()" class="glass-input" style="width: auto; padding: 8px 15px; cursor:pointer;">
                     </select>
-                    <button class="btn-primary" onclick="runUIAnalysis()" style="width:auto;"><i class="fas fa-sync"></i></button>
+                    <button class="btn-primary" onclick="runUIAnalysis(true)" style="width:auto;" aria-label="Muat ulang data analisis"><i class="fas fa-sync"></i></button>
                 </div>
              </div>
 
@@ -356,7 +356,7 @@
                  <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--success);">
                      <div class="stat-icon green" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-money-bill-wave"></i></div>
                      <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">EST. REVENUE</h4>
+                         <h4 style="font-size:0.8rem;">NILAI PESANAN</h4>
                          <span class="value" id="stat-kpi-revenue" style="font-size:1.4rem;">Rp 0</span>
                      </div>
                  </div>
@@ -374,11 +374,11 @@
                          <span class="value" id="stat-kpi-aov" style="font-size:1.4rem;">Rp 0</span>
                      </div>
                  </div>
-                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--danger);">
-                     <div class="stat-icon" style="color:var(--danger); background:#fee2e2; width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-ban"></i></div>
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--primary);">
+                     <div class="stat-icon green" style="width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-wallet"></i></div>
                      <div class="stat-info">
-                         <h4 style="font-size:0.8rem;">CANCEL RATE</h4>
-                         <span class="value" id="stat-kpi-cancel" style="font-size:1.4rem;">0%</span>
+                         <h4 style="font-size:0.8rem;">DP TERKUMPUL</h4>
+                         <span class="value" id="stat-kpi-dp" style="font-size:1.4rem;">Rp 0</span>
                      </div>
                  </div>
              </div>
@@ -429,6 +429,19 @@
       </div>
 
       <div id="tab-settings" class="content-section">
+          <div class="glass-panel" style="margin-bottom:20px;">
+              <div class="card-header"><h3><i class="fas fa-sliders-h"></i> Pengaturan Tagihan</h3></div>
+              <div style="padding: 20px;">
+                  <p style="color:var(--text-muted); font-size:0.9rem;">Dipakai pada pesan WhatsApp konfirmasi/tagihan di Inbox.</p>
+                  <div class="form-row">
+                      <div class="form-group"><label for="cfgPpn">PPN (%)</label><input type="number" id="cfgPpn" class="glass-input" min="0" max="100" step="0.5"></div>
+                      <div class="form-group"><label for="cfgDp">DP (%)</label><input type="number" id="cfgDp" class="glass-input" min="0" max="100" step="1"></div>
+                  </div>
+                  <div class="form-group"><label for="cfgAccountName">Atas nama rekening</label><input type="text" id="cfgAccountName" class="glass-input"></div>
+                  <div class="form-group"><label for="cfgBanks">Rekening (satu per baris: Nama Bank: nomor)</label><textarea id="cfgBanks" class="glass-input" rows="4"></textarea></div>
+                  <button class="btn-primary" style="width:auto;" onclick="saveBusinessSettings()">Simpan Pengaturan</button>
+              </div>
+          </div>
           <div class="glass-panel">
               <div class="card-header">
                   <h3><i class="fas fa-image"></i> Tampilan Background</h3>
