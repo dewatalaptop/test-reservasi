@@ -191,7 +191,7 @@ async function loadLocations() {
         snapshot.forEach(doc => {
             const data = doc.data();
             locationsData[doc.id] = { name: data.name, capacity: data.capacity };
-            htmlContent += `<div class="menu-item" style="padding:10px; border-bottom:1px solid #eee;"><b>${escapeHtml(data.name)}</b> (Kap: ${data.capacity})</div>`;
+            htmlContent += `<div class="menu-item" style="padding:10px; border-bottom:1px solid #eee;"><b>${escapeHtml(data.name)}</b> (Kap: ${escapeHtml(data.capacity)})</div>`;
         });
 
         if(previewList) previewList.innerHTML = htmlContent || '<p style="padding:10px;">Belum ada lokasi.</p>';
@@ -419,12 +419,12 @@ function updateNotificationDropdown() {
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <b style="color:var(--text-main); font-size:0.9rem;">${escapeHtml(r.nama)}</b>
                 <span style="font-size:0.75rem; color:var(--primary); background:#ecfdf5; padding:2px 6px; border-radius:4px; white-space:nowrap;">
-                    ${r.date}
+                    ${escapeHtml(r.date)}
                 </span>
             </div>
             <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap:5px;">
-                <span><i class="fas fa-users"></i> ${r.jumlah}</span> &bull; 
-                <span><i class="far fa-clock"></i> ${r.jam}</span>
+                <span><i class="fas fa-users"></i> ${escapeHtml(r.jumlah)}</span> &bull; 
+                <span><i class="far fa-clock"></i> ${escapeHtml(r.jam)}</span>
             </div>
             <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">
                 ${escapeHtml(r.tempat)}
@@ -465,7 +465,7 @@ function renderInboxUI() {
                 
                 return `
                 <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:4px 0; border-bottom:1px solid rgba(0,0,0,0.05);">
-                    <span><b>${m.quantity}x</b> ${escapeHtml(m.name)}</span>
+                    <span><b>${escapeHtml(m.quantity)}x</b> ${escapeHtml(m.name)}</span>
                     <span style="color:var(--text-muted);">Rp ${formatRupiah(subtotal)}</span>
                 </div>`;
             }).join('');
@@ -483,7 +483,7 @@ function renderInboxUI() {
             <div class="request-header" style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:10px;">
                 <div>
                     <div class="req-name" style="font-size:1.1rem; font-weight:700;">${escapeHtml(r.nama)}</div>
-                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${r.nomorHp || '-'}</div>
+                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(r.nomorHp || '-')}</div>
                 </div>
                 ${viaBadge}
             </div>
@@ -500,7 +500,7 @@ function renderInboxUI() {
                     </div>
                 </div>
                 <div style="display:flex; justify-content:space-between; padding:0 5px; font-size:0.9rem; color:var(--text-main); margin-bottom:10px;">
-                    <span><i class="fas fa-users" style="color:var(--primary);"></i> <b>${r.jumlah}</b> Orang</span>
+                    <span><i class="fas fa-users" style="color:var(--primary);"></i> <b>${escapeHtml(r.jumlah)}</b> Orang</span>
                     <span><i class="fas fa-map-marker-alt" style="color:var(--primary);"></i> ${escapeHtml(r.tempat)}</span>
                 </div>
             </div>
@@ -516,13 +516,13 @@ function renderInboxUI() {
             </div>` : ''}
             
             <div class="req-actions" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
-                <button class="btn-icon whatsapp" style="width:100%; border-radius:10px;" onclick="prepareInboxChat('${r.id}')" title="Hubungi Pelanggan">
+                <button class="btn-icon whatsapp" style="width:100%; border-radius:10px;" onclick="prepareInboxChat('${escapeForJsAttr(r.id)}')" title="Hubungi Pelanggan">
                     <i class="fab fa-whatsapp"></i>
                 </button>
-                <button class="btn-icon danger" style="width:100%; border-radius:10px;" onclick="rejectRequest('${r.id}')" title="Tolak">
+                <button class="btn-icon danger" style="width:100%; border-radius:10px;" onclick="rejectRequest('${escapeForJsAttr(r.id)}')" title="Tolak">
                     <i class="fas fa-times"></i>
                 </button>
-                <button class="btn-icon primary" style="width:100%; border-radius:10px;" onclick="approveRequest('${r.id}')" title="Approve">
+                <button class="btn-icon primary" style="width:100%; border-radius:10px;" onclick="approveRequest('${escapeForJsAttr(r.id)}')" title="Approve">
                     <i class="fas fa-check"></i>
                 </button>
             </div>
@@ -601,7 +601,7 @@ async function approveRequest(id) {
 
     // Tampilkan Dialog Input DP & Metode Bayar
     const { value: formValues } = await Swal.fire({
-        title: `<h3 style="color:var(--primary)">Approve: ${req.nama}</h3>`,
+        title: `<h3 style="color:var(--primary)">Approve: ${escapeHtml(req.nama)}</h3>`,
         html: `
             <div style="text-align:left; margin-bottom:15px;">
                 <label style="font-weight:600; font-size:0.9rem; color:#666;">Nominal DP Masuk (Rp)</label>
@@ -636,7 +636,7 @@ async function approveRequest(id) {
         try {
             // Persiapkan Data Baru
             const newData = { 
-                ...req, 
+                ...pickRequestFields(req), 
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
                 dp: parseInt(formValues.dp) || 0, 
                 tipeDp: formValues.tipeDp,
@@ -661,7 +661,7 @@ async function approveRequest(id) {
 
         } catch (e) { 
             console.error("Approve Error:", e);
-            showToast('Terjadi kesalahan sistem.', 'error');
+            showToast(e && e.message === 'INVALID_REQUEST' ? 'Data permintaan tidak valid, periksa isi kartu.' : 'Terjadi kesalahan sistem.', 'error');
         } finally {
             hideLoader();
         }
@@ -807,11 +807,11 @@ function updateDashboardWidgets(allData) {
                     <div style="flex:1;">
                         <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">${escapeHtml(r.nama)}</div>
                         <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
-                            <i class="far fa-calendar"></i> ${r.date} &bull; <i class="far fa-clock"></i> ${r.jam}
+                            <i class="far fa-calendar"></i> ${escapeHtml(r.date)} &bull; <i class="far fa-clock"></i> ${escapeHtml(r.jam)}
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <span class="pill" style="background:var(--primary-gradient); color:white; font-size:0.75rem;">${r.jumlah} Pax</span>
+                        <span class="pill" style="background:var(--primary-gradient); color:white; font-size:0.75rem;">${escapeHtml(r.jumlah)} Pax</span>
                         <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${escapeHtml(r.tempat)}</div>
                     </div>
                 </div>
@@ -1046,9 +1046,9 @@ function updateReservationList(reservations) {
                 // Ambil detail isi paket dari Data Master
                 const details = detailMenu[item.name] || [];
                 const detailStr = details.length > 0 
-                    ? `<div style="font-size:0.75rem; color:#64748b; margin-top:2px; padding-left:5px; border-left:2px solid #e2e8f0; line-height:1.2;">${details.join(', ')}</div>` 
+                    ? `<div style="font-size:0.75rem; color:#64748b; margin-top:2px; padding-left:5px; border-left:2px solid #e2e8f0; line-height:1.2;">${escapeHtml(details.join(', '))}</div>` 
                     : '';
-                return `<div style="margin-bottom:8px;"><div style="font-weight:600; color:var(--text-main);">${item.quantity}x ${escapeHtml(item.name)}</div>${detailStr}</div>`;
+                return `<div style="margin-bottom:8px;"><div style="font-weight:600; color:var(--text-main);">${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}</div>${detailStr}</div>`;
             }).join('');
         } else if (r.menu) { 
             // Support data legacy
@@ -1063,7 +1063,7 @@ function updateReservationList(reservations) {
         // Tombol Thanks (Disabled jika sudah dikirim)
         let thanksBtn = r.thankYouSent 
             ? `<button class="btn-icon" disabled style="background:#f1f5f9; color:#94a3b8; cursor:default;" title="Sudah dikirim"><i class="fas fa-check-double"></i></button>`
-            : `<button class="btn-icon info" id="thank-btn-${r.id}" onclick="sendThankYouMessage('${r.id}', '${escapeHtml(r.nama)}', '${r.nomorHp}')" title="Kirim Ucapan"><i class="fas fa-gift"></i></button>`;
+            : `<button class="btn-icon info" id="thank-btn-${escapeHtml(r.id)}" onclick="sendThankYouMessage('${escapeForJsAttr(r.id)}')" title="Kirim Ucapan"><i class="fas fa-gift"></i></button>`;
 
         return `
         <div class="reservation-item glass-card" style="margin:0; padding:20px; border-left:4px solid var(--primary); margin-bottom:15px;">
@@ -1073,11 +1073,11 @@ function updateReservationList(reservations) {
                     ${dpInfo}
                 </div>
                 <div style="font-size:0.9rem; color:var(--text-muted); display:flex; gap:15px; flex-wrap:wrap;">
-                    <span><i class="far fa-clock" style="color:var(--primary);"></i> ${r.jam}</span>
+                    <span><i class="far fa-clock" style="color:var(--primary);"></i> ${escapeHtml(r.jam)}</span>
                     <span><i class="fas fa-map-marker-alt" style="color:var(--primary);"></i> ${escapeHtml(r.tempat)}</span>
-                    <span><i class="fas fa-users" style="color:var(--primary);"></i> <b>${r.jumlah}</b> Pax</span>
+                    <span><i class="fas fa-users" style="color:var(--primary);"></i> <b>${escapeHtml(r.jumlah)}</b> Pax</span>
                 </div>
-                ${r.nomorHp ? `<div style="font-size:0.85rem; color:#666; margin-top:5px;"><i class="fas fa-phone"></i> ${r.nomorHp}</div>` : ''}
+                ${r.nomorHp ? `<div style="font-size:0.85rem; color:#666; margin-top:5px;"><i class="fas fa-phone"></i> ${escapeHtml(r.nomorHp)}</div>` : ''}
             </div>
             
             <div class="menu-detail" style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px; border-left:3px solid var(--accent); margin-bottom:10px;">
@@ -1088,11 +1088,11 @@ function updateReservationList(reservations) {
             ${r.tambahan ? `<div style="font-size:0.85rem; color:#d97706; margin-top:8px; background:#fffbeb; padding:8px; border-radius:8px; border:1px dashed #fcd34d;"><i class="fas fa-comment-dots"></i> <b>Note:</b> ${escapeHtml(r.tambahan)}</div>` : ''}
             
             <div class="item-actions" style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; border-top:1px solid rgba(0,0,0,0.05); padding-top:12px;">
-                ${r.nomorHp ? `<button class="btn-icon whatsapp" onclick="contactPersonal('${r.id}')" title="Chat WA"><i class="fab fa-whatsapp"></i></button>` : ''}
+                ${r.nomorHp ? `<button class="btn-icon whatsapp" onclick="contactPersonal('${escapeForJsAttr(r.id)}')" title="Chat WA"><i class="fab fa-whatsapp"></i></button>` : ''}
                 ${thanksBtn}
                 <div style="flex:1;"></div> 
-                <button class="btn-icon" style="background:var(--text-muted); color:white;" onclick="editReservasi('${r.id}')" title="Edit"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon danger" onclick="hapusReservasi('${r.id}')" title="Hapus"><i class="fas fa-trash"></i></button>
+                <button class="btn-icon" style="background:var(--text-muted); color:white;" onclick="editReservasi('${escapeForJsAttr(r.id)}')" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon danger" onclick="hapusReservasi('${escapeForJsAttr(r.id)}')" title="Hapus"><i class="fas fa-trash"></i></button>
             </div>
         </div>`;
     }).join('');
@@ -1157,21 +1157,21 @@ function editReservasi(id) {
         <button class="close-popup-btn" onclick="closePopup('editFormPopup')" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
     </div>
     <form id="edit-reservation-form" style="padding:25px;">
-      <input type="hidden" id="editReservationId" value="${res.id}" />
+      <input type="hidden" id="editReservationId" value="${escapeHtml(res.id)}" />
       
       <div class="form-group">
           <label>Tanggal</label>
-          <input type="date" id="editDate" class="glass-input" value="${res.date}" readonly style="background:#f1f5f9; color:#64748b; cursor:not-allowed;" />
+          <input type="date" id="editDate" class="glass-input" value="${escapeHtml(res.date)}" readonly style="background:#f1f5f9; color:#64748b; cursor:not-allowed;" />
           <small style="color:#94a3b8; font-size:0.8rem;">*Tanggal tidak bisa diubah (Hapus & buat baru jika perlu).</small>
       </div>
 
       <div class="form-group"><label>Nama</label><input type="text" id="nama" class="glass-input" value="${escapeHtml(res.nama || '')}" required /><span class="err-msg" id="nama-error"></span></div>
       <div class="form-row">
-          <div class="form-group"><label>No. HP</label><input type="tel" id="nomorHp" class="glass-input" value="${res.nomorHp || ''}" /><span class="err-msg" id="nomorHp-error"></span></div>
-          <div class="form-group"><label>Jam</label><input type="time" id="jam" class="glass-input" value="${res.jam || ''}" required /><span class="err-msg" id="jam-error"></span></div>
+          <div class="form-group"><label>No. HP</label><input type="tel" id="nomorHp" class="glass-input" value="${escapeHtml(res.nomorHp)}" /><span class="err-msg" id="nomorHp-error"></span></div>
+          <div class="form-group"><label>Jam</label><input type="time" id="jam" class="glass-input" value="${escapeHtml(res.jam)}" required /><span class="err-msg" id="jam-error"></span></div>
       </div>
       <div class="form-row">
-          <div class="form-group"><label>Jml Org</label><input type="number" id="jumlah" class="glass-input" value="${res.jumlah || ''}" min="1" required /><span class="err-msg" id="jumlah-error"></span></div>
+          <div class="form-group"><label>Jml Org</label><input type="number" id="jumlah" class="glass-input" value="${escapeHtml(res.jumlah)}" min="1" required /><span class="err-msg" id="jumlah-error"></span></div>
           <div class="form-group">
               <label>Tempat</label>
               <select id="tempat" class="glass-input" required onchange="updateCapacityInfo('edit-reservation-form')"></select>
@@ -1182,7 +1182,7 @@ function editReservasi(id) {
       
       <div style="background:rgba(255,255,255,0.5); padding:15px; border-radius:12px; border:1px dashed var(--accent); margin-bottom:15px;">
           <div class="form-row">
-              <div class="form-group"><label>Nominal DP</label><input type="number" id="dp" class="glass-input" value="${res.dp || 0}" min="0" /></div>
+              <div class="form-group"><label>Nominal DP</label><input type="number" id="dp" class="glass-input" value="${escapeHtml(res.dp || 0)}" min="0" /></div>
               <div class="form-group"><label>Via Pembayaran</label>
                 <select id="tipeDp" class="glass-input">
                     <option value="">- Tanpa DP -</option><option value="Cash">Cash</option><option value="QRIS">QRIS</option>
@@ -1351,7 +1351,7 @@ function addMenuSelectionRow(formId, defaultName='', defaultQty=1) {
   
   const optionsHtml = Object.keys(detailMenu).sort().map(name => {
       const selected = name === defaultName ? 'selected' : '';
-      return `<option value="${name}" ${selected}>${escapeHtml(name)}</option>`;
+      return `<option value="${escapeHtml(name)}" ${selected}>${escapeHtml(name)}</option>`;
   }).join('');
 
   div.innerHTML = `
@@ -1367,7 +1367,7 @@ function populateLocationDropdown(selectElement, defaultValue='') {
     const sortedLocs = Object.values(locationsData).sort((a,b) => a.name.localeCompare(b.name));
     sortedLocs.forEach(loc => {
         const selected = loc.name === defaultValue ? 'selected' : '';
-        selectElement.insertAdjacentHTML('beforeend', `<option value="${loc.name}" ${selected}>${escapeHtml(loc.name)} (Kap: ${loc.capacity})</option>`);
+        selectElement.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(loc.name)}" ${selected}>${escapeHtml(loc.name)} (Kap: ${escapeHtml(loc.capacity)})</option>`);
     });
 }
 
@@ -1377,7 +1377,7 @@ function updateCapacityInfo(formId) {
     const infoSpan = form.querySelector('#capacity-info');
     const locKey = Object.keys(locationsData).find(k => locationsData[k].name === val);
     if (locKey) {
-        infoSpan.innerHTML = `<i class="fas fa-info-circle"></i> Max: <b>${locationsData[locKey].capacity} orang</b>`;
+        infoSpan.innerHTML = `<i class="fas fa-info-circle"></i> Max: <b>${escapeHtml(locationsData[locKey].capacity)} orang</b>`;
     } else {
         infoSpan.textContent = '';
     }
@@ -1551,8 +1551,8 @@ function renderManageLocList() {
     if(!listEl) return;
     listEl.innerHTML = Object.entries(locationsData).sort(([,a], [,b]) => a.name.localeCompare(b.name)).map(([docId, data]) => `
         <div class="menu-item" style="padding:12px 15px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
-            <div style="flex:1;"><div style="font-weight:600; color:var(--text-main);">${escapeHtml(data.name)}</div><small style="color:#666;">Kapasitas Max: ${data.capacity} orang</small></div>
-            <button class="btn-del" onclick="deleteLocation('${docId}')"><i class="fas fa-trash"></i></button>
+            <div style="flex:1;"><div style="font-weight:600; color:var(--text-main);">${escapeHtml(data.name)}</div><small style="color:#666;">Kapasitas Max: ${escapeHtml(data.capacity)} orang</small></div>
+            <button class="btn-del" onclick="deleteLocation('${escapeForJsAttr(docId)}')"><i class="fas fa-trash"></i></button>
         </div>`
     ).join('');
 }
@@ -1662,8 +1662,8 @@ function renderBroadcastList(arr) {
 
     container.innerHTML = arr.map(c => `
         <div class="menu-item" style="padding:10px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9;">
-            <div style="flex:1;"><div style="font-weight:600;">${escapeHtml(c.name)}</div><small class="text-muted">${c.phone}</small></div>
-            <button class="btn-icon whatsapp" onclick="sendPromo('${c.phone}', '${escapeHtml(c.name)}', this)"><i class="fab fa-whatsapp"></i></button>
+            <div style="flex:1;"><div style="font-weight:600;">${escapeHtml(c.name)}</div><small class="text-muted">${escapeHtml(c.phone)}</small></div>
+            <button class="btn-icon whatsapp" onclick="sendPromo('${escapeForJsAttr(c.phone)}', this)"><i class="fab fa-whatsapp"></i></button>
         </div>
     `).join('');
 }
@@ -1674,9 +1674,11 @@ function filterBroadcastCustomers(q) {
     renderBroadcastList(filtered);
 }
 
-function sendPromo(hp, nm, btnEl) {
+function sendPromo(hp, btnEl) {
+    const cust = allCustomersCache.find(c => c.phone === hp);
+    const nm = cust ? cust.name : '';
     let msg = localStorage.getItem(BROADCAST_MESSAGE_KEY);
-    msg = msg.replace(/kak/gi, `Kak *${nm}*`); 
+    msg = msg.replace(/\bkak\b/i, `Kak *${nm}*`); 
     window.open(`https://wa.me/${hp}?text=${encodeURIComponent(msg)}`, '_blank');
     if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = 0.5; }
 }
@@ -1750,22 +1752,22 @@ function executePrint() {
                     if (r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
                         menuStr = r.menus.map(m => {
                             const details = detailMenu[m.name] || [];
-                            const detailStr = details.length > 0 ? `<br><span style="color:#555; font-size:0.85em;">(${details.join(', ')})</span>` : '';
+                            const detailStr = details.length > 0 ? `<br><span style="color:#555; font-size:0.85em;">(${escapeHtml(details.join(', '))})</span>` : '';
                             const priceStr = showHarga ? (() => {
                                 const price = (typeof m.price === 'number') ? m.price : (menuPrices[m.name] || 0);
-                                return ` <span style="color:#666;">— Rp ${formatRupiah(price)} x ${m.quantity} = Rp ${formatRupiah(price * (parseInt(m.quantity)||0))}</span>`;
+                                return ` <span style="color:#666;">— Rp ${formatRupiah(price)} x ${escapeHtml(m.quantity)} = Rp ${formatRupiah(price * (parseInt(m.quantity)||0))}</span>`;
                             })() : '';
-                            return `${m.quantity}x ${m.name}${priceStr}${detailStr}`;
+                            return `${escapeHtml(m.quantity)}x ${escapeHtml(m.name)}${priceStr}${detailStr}`;
                         }).join('<br>');
                     } else if (r.menu) {
-                        menuStr = r.menu;
+                        menuStr = escapeHtml(r.menu);
                     }
                 }
                 return `<tr>
                     <td style="text-align:center;">${i+1}</td>
                     <td style="text-align:center;">${escapeHtml(r.jam)}</td>
                     <td><b>${escapeHtml(r.nama)}</b>${showKontak ? `<br><small>${escapeHtml(r.nomorHp||'-')}</small>` : ''}</td>
-                    <td style="text-align:center;">${r.jumlah}</td>
+                    <td style="text-align:center;">${escapeHtml(r.jumlah)}</td>
                     <td>${escapeHtml(r.tempat)}</td>
                     ${showMenu ? `<td>${menuStr}</td>` : ''}
                     ${showHarga ? `<td style="text-align:right;">Rp ${formatRupiah(getReservationOrderTotal(r))}</td>` : ''}
@@ -1782,12 +1784,12 @@ function executePrint() {
                     if (r.menus && Array.isArray(r.menus) && r.menus.length > 0) {
                         const items = r.menus.map(m => {
                             const details = detailMenu[m.name] || [];
-                            const detailStr = details.length > 0 ? `<div style="font-size:10px; color:#555; margin-left:15px; margin-top:2px;">- ${details.join(', ')}</div>` : '';
+                            const detailStr = details.length > 0 ? `<div style="font-size:10px; color:#555; margin-left:15px; margin-top:2px;">- ${escapeHtml(details.join(', '))}</div>` : '';
                             const priceStr = showHarga ? (() => {
                                 const price = (typeof m.price === 'number') ? m.price : (menuPrices[m.name] || 0);
-                                return ` <span style="color:#666; font-weight:400;">(Rp ${formatRupiah(price)} x ${m.quantity})</span>`;
+                                return ` <span style="color:#666; font-weight:400;">(Rp ${formatRupiah(price)} x ${escapeHtml(m.quantity)})</span>`;
                             })() : '';
-                            return `<div style="margin-bottom:4px;"><b>${m.quantity}x</b> ${escapeHtml(m.name)}${priceStr}${detailStr}</div>`;
+                            return `<div style="margin-bottom:4px;"><b>${escapeHtml(m.quantity)}x</b> ${escapeHtml(m.name)}${priceStr}${detailStr}</div>`;
                         }).join('');
                         menuHtml = `<div class="print-menu-box">${items}</div>`;
                     } else if (r.menu) {
@@ -1798,7 +1800,7 @@ function executePrint() {
                 <div class="print-card">
                     <div>
                         <div class="pc-head"><span class="pc-num">#${i+1}</span><span class="pc-time">${escapeHtml(r.jam)}</span></div>
-                        <div class="pc-body"><div class="pc-name">${escapeHtml(r.nama)}</div>${showKontak&&r.nomorHp?`<div class="pc-meta">📞 ${escapeHtml(r.nomorHp)}</div>`:''}<div class="pc-meta-row"><span>👥 ${r.jumlah}</span><span>📍 ${escapeHtml(r.tempat)}</span></div>
+                        <div class="pc-body"><div class="pc-name">${escapeHtml(r.nama)}</div>${showKontak&&r.nomorHp?`<div class="pc-meta">📞 ${escapeHtml(r.nomorHp)}</div>`:''}<div class="pc-meta-row"><span>👥 ${escapeHtml(r.jumlah)}</span><span>📍 ${escapeHtml(r.tempat)}</span></div>
                         ${menuHtml}
                         </div>
                     </div>
@@ -1998,7 +2000,11 @@ function applySavedBackground() {
     else root.style.setProperty('--bg-image', "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2232&auto=format&fit=crop')");
 }
 
-function sendThankYouMessage(id, nm, hp) {
+function sendThankYouMessage(id) {
+    const r = findReservationById(id);
+    if (!r) return showToast("Data tidak ditemukan", "error");
+    if (!r.nomorHp) return showToast("Nomor HP tidak tersedia", "error");
+    const nm = r.nama, hp = r.nomorHp;
     const msg = `Halo Kak *${nm}* 👋,\n\nTerima kasih banyak sudah berkunjung ke *Dolan Sawah* hari ini. 🙏\n\nDitunggu kedatangannya kembali! ✨`;
     window.open(`https://wa.me/${cleanPhoneNumber(hp)}?text=${encodeURIComponent(msg)}`, '_blank');
     db.collection('reservations').doc(id).update({ thankYouSent: true });
@@ -2050,6 +2056,31 @@ function getReservationOrderTotal(r) {
     if (r.menu) { return menuPrices[r.menu] || 0; }
     return 0;
 }
+// Cari reservasi (bulan yang sedang dimuat) lewat id.
+function findReservationById(id) {
+    for (const k in dataReservasi) {
+        const found = dataReservasi[k].find(x => x.id === id);
+        if (found) return found;
+    }
+    return null;
+}
+// Hanya field yang memang dikirim form publik yang boleh masuk ke 'reservations',
+// dengan bentuk & batas yang dicek. Field sembarang dari publik dibuang.
+function pickRequestFields(req) {
+    const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+    const date = str(req.date, 10), jam = str(req.jam, 5);
+    const jumlah = parseInt(req.jumlah, 10);
+    const nama = str(req.nama, 100), tempat = str(req.tempat, 100);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(jam) || !nama || !tempat
+        || !Number.isInteger(jumlah) || jumlah < 1 || jumlah > 5000) {
+        throw new Error('INVALID_REQUEST');
+    }
+    const menus = (Array.isArray(req.menus) ? req.menus : []).map(m => ({
+        name: str(m && m.name, 100), quantity: parseInt(m && m.quantity, 10)
+    })).filter(m => m.name && Number.isInteger(m.quantity) && m.quantity > 0 && m.quantity <= 100000);
+    return { date, jam, jumlah, nama, tempat, menus,
+             nomorHp: cleanPhoneNumber(str(req.nomorHp, 20)), tambahan: str(req.tambahan, 1000) };
+}
 function cleanPhoneNumber(phone) { 
     if (!phone) return '';
     return phone.toString().replace(/[^0-9]/g, ''); 
@@ -2059,8 +2090,8 @@ function isValidPhone(phone) {
     return /^[0-9]{10,14}$/.test(cleaned); 
 }
 function escapeHtml(text) {
-  if (!text) return text;
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  if (text === null || text === undefined) return '';
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 // Untuk data yang disisipkan ke dalam onclick="fn('...')" -- escapeHtml saja
 // TIDAK cukup di sini: ia meng-escape ke entity HTML, bukan ke string JS, jadi
@@ -2080,7 +2111,8 @@ function escapeForJsAttr(str) {
 function showToast(message, type = 'success') {
     let icon = type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>';
     if(type === 'info') icon = '<i class="fas fa-info-circle"></i>';
-    toast.innerHTML = `${icon} &nbsp; ${message}`;
+    toast.innerHTML = `${icon} &nbsp; `;
+    toast.appendChild(document.createTextNode(String(message)));
     toast.className = `toast ${type}`;
     toast.style.display = 'block';
     setTimeout(() => { toast.style.opacity = 1; }, 10);
