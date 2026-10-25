@@ -777,6 +777,8 @@ function loadReservationsForCurrentMonth() {
         // 2. Update Widget & List di Halaman Statistik (Tab Dashboard)
         updateDashboardWidgets(allReservationsList);
 
+        if (pendingPickDay) { const pd = pendingPickDay; pendingPickDay = 0; pilihTanggal(pd); }
+
         // 3. Cek Auto Open (Deep Link dari notifikasi WA)
         handleAutoOpen();
 
@@ -806,7 +808,7 @@ function updateDashboardWidgets(allData) {
     const todayStr = localDateStr();
     
     // --- Widget 1: Tamu Hari Ini ---
-    const todayCount = allData.filter(r => r.date === todayStr).length;
+    const todayCount = allData.filter(r => r.date === todayStr && isActive(r)).length;
     const statToday = document.getElementById('stat-today-count');
     if(statToday) statToday.textContent = todayCount;
 
@@ -882,7 +884,7 @@ function buatKalender() {
     const isSelected = dateKey === tanggalDipilih ? 'selected' : '';
     
     // Hitung Jumlah Reservasi pada tanggal ini
-    const dailyData = dataReservasi[dateKey] || [];
+    const dailyData = (dataReservasi[dateKey] || []).filter(isActive);
     const countHTML = dailyData.length > 0 
         ? `<span class="reservation-count">${dailyData.length} Res</span>` 
         : '';
@@ -1092,10 +1094,10 @@ function updateReservationList(reservations) {
             : `<button class="btn-icon info" id="thank-btn-${escapeHtml(r.id)}" onclick="sendThankYouMessage('${escapeForJsAttr(r.id)}')" title="Kirim Ucapan"><i class="fas fa-gift"></i></button>`;
 
         return `
-        <div class="reservation-item glass-card" style="margin:0; padding:20px; border-left:4px solid var(--primary); margin-bottom:15px;">
+        <div class="reservation-item glass-card" style="margin:0; padding:20px; border-left:4px solid ${r.status === 'batal' ? '#ef4444' : r.status === 'hadir' ? '#3b82f6' : 'var(--primary)'}; margin-bottom:15px; ${r.status === 'batal' ? 'opacity:.65;' : ''}">
             <div style="border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:10px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:5px;">
-                    <h4 style="margin:0; color:var(--text-main); font-size:1.1rem;">${escapeHtml(r.nama)}</h4>
+                    <h4 style="margin:0; color:var(--text-main); font-size:1.1rem;">${escapeHtml(r.nama)}${r.status === 'batal' ? ' <span class="pill" style="background:#fee2e2;color:#991b1b;">Batal</span>' : r.status === 'hadir' ? ' <span class="pill" style="background:#dbeafe;color:#1e40af;">Hadir</span>' : ''}</h4>
                     ${dpInfo}
                 </div>
                 <div style="font-size:0.9rem; color:var(--text-muted); display:flex; gap:15px; flex-wrap:wrap;">
@@ -1116,6 +1118,7 @@ function updateReservationList(reservations) {
             <div class="item-actions" style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap; border-top:1px solid rgba(0,0,0,0.05); padding-top:12px;">
                 ${r.nomorHp ? `<button class="btn-icon whatsapp" onclick="contactPersonal('${escapeForJsAttr(r.id)}')" title="Chat WA"><i class="fab fa-whatsapp"></i></button>` : ''}
                 ${thanksBtn}
+                <select class="glass-input" style="width:auto; padding:6px 10px; min-height:0;" aria-label="Status reservasi" onchange="setReservationStatus('${escapeForJsAttr(r.id)}', this.value)"><option value="konfirmasi" ${(!r.status || r.status === 'konfirmasi') ? 'selected' : ''}>Terkonfirmasi</option><option value="hadir" ${r.status === 'hadir' ? 'selected' : ''}>Hadir</option><option value="batal" ${r.status === 'batal' ? 'selected' : ''}>Batal</option></select>
                 <div style="flex:1;"></div> 
                 <button class="btn-icon" style="background:var(--text-muted); color:white;" onclick="editReservasi('${escapeForJsAttr(r.id)}')" title="Edit"><i class="fas fa-edit"></i></button>
                 <button class="btn-icon danger" onclick="hapusReservasi('${escapeForJsAttr(r.id)}')" title="Hapus"><i class="fas fa-trash"></i></button>
@@ -1777,7 +1780,7 @@ function printData() {
 }
 
 function executePrint() {
-    const list = dataReservasi[tanggalDipilih] || [];
+    const list = (dataReservasi[tanggalDipilih] || []).filter(isActive);
     if (list.length === 0) return showToast("Data kosong pada tanggal ini", "error");
 
     try {
@@ -1949,17 +1952,19 @@ async function runUIAnalysis(force) {
     const selectedYear = parseInt(yearSel.value);
     const selectedMonth = monthSel.value === 'all' ? 'all' : parseInt(monthSel.value);
 
-    const filteredData = allReservationsCache.filter(r => {
+    const periodData = allReservationsCache.filter(r => {
         if (!r.date) return false;
         const y = parseInt(r.date.slice(0, 4), 10), m = parseInt(r.date.slice(5, 7), 10) - 1;
         const matchYear = y === selectedYear;
         const matchMonth = selectedMonth === 'all' ? true : m === selectedMonth;
         return matchYear && matchMonth;
     });
+    const filteredData = periodData.filter(isActive);
+    const cancelledCount = periodData.length - filteredData.length;
 
     // KPI
     const totalRevenue = filteredData.reduce((acc, curr) => acc + getReservationOrderTotal(curr), 0); // nilai pesanan (sebelum PPN)
-    const totalDp = filteredData.reduce((acc, curr) => acc + (parseInt(curr.dp)||0), 0);
+    const totalDp = periodData.reduce((acc, curr) => acc + (parseInt(curr.dp)||0), 0);
     const totalPax = filteredData.reduce((acc, curr) => acc + (parseInt(curr.jumlah)||0), 0);
     const totalTrans = filteredData.length;
     const aov = totalTrans > 0 ? Math.round(totalRevenue / totalTrans) : 0;
@@ -1968,6 +1973,8 @@ async function runUIAnalysis(force) {
     document.getElementById('stat-kpi-pax').textContent = totalPax;
     document.getElementById('stat-kpi-aov').textContent = `Rp ${formatRupiah(aov)}`;
     document.getElementById('stat-kpi-dp').textContent = `Rp ${formatRupiah(totalDp)}`;
+    const cancelEl = document.getElementById('stat-kpi-cancel');
+    if (cancelEl) cancelEl.textContent = periodData.length ? `${(cancelledCount / periodData.length * 100).toFixed(1)}% (${cancelledCount})` : '0%';
 
     // Charts Data
     let labels = [], dataPoints = [];
@@ -2102,13 +2109,100 @@ function contactPersonal(id) {
 function shareViaWhatsApp(type) {
     if (type === 'day') {
         if (!tanggalDipilih) return showToast("Pilih tanggal dulu!", "error");
-        const list = dataReservasi[tanggalDipilih] || [];
+        const list = (dataReservasi[tanggalDipilih] || []).filter(isActive);
         let msg = `*LAPORAN ${tanggalDipilih}*\nTotal: ${list.length} Reservasi\n\n`;
         list.forEach((r,i) => msg += `${i+1}. ${r.nama} (${r.jam}) - ${r.jumlah} pax\n`);
         window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     }
 }
 
+
+/**
+ * STATUS RESERVASI & PENCARIAN GLOBAL
+ * status: 'konfirmasi' (bawaan/kosong) | 'hadir' | 'batal'. Yang batal tidak dihitung ke tamu,
+ * kapasitas, laporan cetak, dan analisis (tetap tersimpan, tidak dihapus permanen).
+ */
+const isActive = r => !r || r.status !== 'batal';
+let pendingPickDay = 0;
+let globalSearchCache = null, globalSearchCacheAt = 0;
+
+async function setReservationStatus(id, status) {
+    if (!['konfirmasi', 'hadir', 'batal'].includes(status)) return;
+    try {
+        await db.collection('reservations').doc(id).update({ status });
+        showToast(status === 'batal' ? 'Reservasi dibatalkan (tidak dihitung ke kapasitas).' : 'Status diperbarui.', 'success');
+        globalSearchCache = null; allReservationsCache = null;
+    } catch (e) { console.error(e); showToast('Gagal mengubah status.', 'error'); }
+}
+
+function showGlobalSearch() {
+    const popup = document.getElementById('globalSearchPopup');
+    popup.innerHTML = `
+      <div class="popup-header" style="padding: 20px; background: var(--primary); color: white; display: flex; justify-content: space-between;">
+          <h3 style="margin:0;"><i class="fas fa-search"></i> Cari Semua Reservasi</h3>
+          <button class="close-popup-btn" onclick="closePopup('globalSearchPopup')" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+      </div>
+      <div class="popup-content" style="padding:20px;">
+          <input type="search" id="globalSearchInput" class="glass-input" placeholder="Nama, nomor HP, tempat, atau menu..." oninput="runGlobalSearch(this.value)" style="margin-bottom:12px;" autocomplete="off">
+          <div id="globalSearchResults" style="max-height:55vh; overflow-y:auto; border:1px solid rgba(0,0,0,0.05); border-radius:12px; background:white;">
+              <p style="padding:20px; text-align:center; color:#888;">Ketik minimal 2 huruf.</p>
+          </div>
+      </div>`;
+    popup.style.display = 'block'; overlay.style.display = 'block';
+    setTimeout(() => { const i = document.getElementById('globalSearchInput'); if (i) i.focus(); }, 50);
+}
+
+let _gsTimer = null;
+function runGlobalSearch(q) {
+    clearTimeout(_gsTimer);
+    _gsTimer = setTimeout(() => doGlobalSearch(q), 250);
+}
+
+async function doGlobalSearch(q) {
+    const box = document.getElementById('globalSearchResults');
+    if (!box) return;
+    q = (q || '').trim().toLowerCase();
+    if (q.length < 2) { box.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Ketik minimal 2 huruf.</p>'; return; }
+    if (!globalSearchCache || Date.now() - globalSearchCacheAt > 300000) {
+        box.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Memuat data...</p>';
+        try {
+            const snap = await db.collection('reservations').get();
+            globalSearchCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            globalSearchCacheAt = Date.now();
+        } catch (e) { box.innerHTML = '<p style="padding:20px; text-align:center; color:#b91c1c;">Gagal memuat data.</p>'; return; }
+    }
+    const digits = q.replace(/[^0-9]/g, '');
+    const hits = globalSearchCache.filter(r =>
+        (r.nama && r.nama.toLowerCase().includes(q)) ||
+        (r.tempat && r.tempat.toLowerCase().includes(q)) ||
+        (digits.length >= 3 && r.nomorHp && cleanPhoneNumber(r.nomorHp).includes(cleanPhoneNumber(digits))) ||
+        (Array.isArray(r.menus) && r.menus.some(m => m.name && m.name.toLowerCase().includes(q))) ||
+        (r.menu && r.menu.toLowerCase().includes(q))
+    ).sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 50);
+    if (!hits.length) { box.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Tidak ditemukan.</p>'; return; }
+    box.innerHTML = hits.map(r => {
+        const ok = /^\d{4}-\d{2}-\d{2}$/.test(r.date || '');
+        const badge = r.status === 'batal' ? ' <span class="pill" style="background:#fee2e2;color:#991b1b;">Batal</span>'
+                    : r.status === 'hadir' ? ' <span class="pill" style="background:#dbeafe;color:#1e40af;">Hadir</span>' : '';
+        return `<div class="menu-item" ${ok ? `role="button" tabindex="0" onclick="gotoReservationDate('${escapeForJsAttr(r.date)}')"` : ''} style="padding:12px 15px; border-bottom:1px solid #f1f5f9; cursor:${ok ? 'pointer' : 'default'};">
+            <div style="font-weight:600;">${escapeHtml(r.nama)}${badge}</div>
+            <div style="font-size:0.8rem; color:#666;">${escapeHtml(r.date)} &bull; ${escapeHtml(r.jam)} &bull; ${escapeHtml(r.tempat)} &bull; ${escapeHtml(r.jumlah)} org</div>
+        </div>`;
+    }).join('');
+}
+
+// Lompat ke tanggal sebuah reservasi di kalender.
+function gotoReservationDate(dateStr) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+    closePopup('globalSearchPopup');
+    switchTab('calendar');
+    const y = parseInt(dateStr.slice(0, 4), 10), m = parseInt(dateStr.slice(5, 7), 10) - 1, d = parseInt(dateStr.slice(8, 10), 10);
+    if (y === currentYear && m === currentMonth) { pilihTanggal(d); return; }
+    currentYear = y; currentMonth = m;
+    kembaliKeKalender();
+    pendingPickDay = d;
+    loadReservationsForCurrentMonth();
+}
 
 /**
  * 22. UTILITY HELPER FUNCTIONS (GLOBAL)
@@ -2229,7 +2323,7 @@ async function confirmCapacity(date, tempat, jumlah, excludeId) {
         if (!loc || !loc.capacity || !date) return true;
         const snap = await db.collection('reservations').where('date', '==', date).get();
         let used = 0;
-        snap.forEach(d => { const x = d.data(); if (d.id !== excludeId && x.tempat === tempat) used += parseInt(x.jumlah) || 0; });
+        snap.forEach(d => { const x = d.data(); if (d.id !== excludeId && x.tempat === tempat && isActive(x)) used += parseInt(x.jumlah) || 0; });
         if (used + jumlah <= loc.capacity) return true;
         const res = await Swal.fire({
             icon: 'warning', title: 'Kapasitas terlampaui',

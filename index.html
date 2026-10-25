@@ -193,7 +193,7 @@
                     <div class="month-label" id="monthYear">...</div>
                     <button onclick="nextMonth()" aria-label="Bulan berikutnya"><i class="fas fa-chevron-right"></i></button>
                 </div>
-                <button class="btn-today" onclick="goToToday()">Hari Ini</button>
+                <div style="display:flex; gap:8px;"><button class="btn-today" onclick="showGlobalSearch()" aria-label="Cari semua reservasi"><i class="fas fa-search"></i> Cari</button><button class="btn-today" onclick="goToToday()">Hari Ini</button></div>
             </div>
             
             <div class="calendar-weekdays">
@@ -381,6 +381,13 @@
                          <span class="value" id="stat-kpi-dp" style="font-size:1.4rem;">Rp 0</span>
                      </div>
                  </div>
+                 <div class="stat-card glass-card" style="padding:20px; border-left:4px solid var(--danger);">
+                     <div class="stat-icon" style="color:var(--danger); background:#fee2e2; width:40px; height:40px; font-size:1.2rem; margin-bottom:10px;"><i class="fas fa-ban"></i></div>
+                     <div class="stat-info">
+                         <h4 style="font-size:0.8rem;">TINGKAT BATAL</h4>
+                         <span class="value" id="stat-kpi-cancel" style="font-size:1.4rem;">0%</span>
+                     </div>
+                 </div>
              </div>
 
              <div class="charts-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
@@ -559,6 +566,7 @@
     </form>
   </div>
 
+  <div id="globalSearchPopup" class="popup-glass large"></div>
   <div id="editFormPopup" class="popup-glass"></div>
   <div id="menuManagementPopup" class="popup-glass"></div>
   <div id="locationManagementPopup" class="popup-glass"></div>
