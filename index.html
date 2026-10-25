@@ -568,7 +568,8 @@
     <div style="padding:20px;">
         <textarea id="export-data-output" class="glass-input code-view" readonly style="height:150px; font-family:monospace;"></textarea>
         <div class="popup-foot" style="margin-top:15px; text-align:right;">
-            <button onclick="copyExportCode()" class="btn-primary">Salin</button>
+            <button onclick="downloadBackup()" class="btn-primary"><i class="fas fa-download"></i> Unduh</button>
+            <button onclick="copyExportCode()" class="btn-action" style="width:auto;">Salin</button>
             <button onclick="closePopup('exportDataPopup')" class="btn-action" style="width:auto;">Tutup</button>
         </div>
     </div>

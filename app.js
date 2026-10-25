@@ -336,13 +336,15 @@ function initInboxListener() {
     console.log("System: Mengaktifkan Listener Inbox...");
     
     unsubscribeRequests = db.collection('reservation_requests')
-        .orderBy('createdAt', 'desc')
         .onSnapshot(snapshot => {
             // 1. Update Cache Lokal
             requestsCache = snapshot.docs.map(d => ({
                 id: d.id, 
                 ...d.data()
             }));
+            // Terbaru di atas; yang tanpa createdAt dianggap terbaru agar tidak terlewat
+            const ts = r => (r.createdAt && r.createdAt.seconds) ? r.createdAt.seconds : Infinity;
+            requestsCache.sort((a, b) => ts(b) - ts(a));
             
             // 2. Render Ulang UI Tab Inbox
             renderInboxUI();
@@ -638,8 +640,8 @@ async function approveRequest(id) {
             const newData = { 
                 ...pickRequestFields(req), 
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
-                dp: parseInt(formValues.dp) || 0, 
-                tipeDp: formValues.tipeDp,
+                dp: Math.max(0, parseInt(formValues.dp) || 0),
+                tipeDp: (parseInt(formValues.dp) > 0) ? formValues.tipeDp : '',
                 thankYouSent: false
             };
             
@@ -648,20 +650,21 @@ async function approveRequest(id) {
             delete newData.via; 
             delete newData.status;
 
-            // Jalankan Batch Transaction
-            const batch = db.batch();
-            const newResRef = db.collection('reservations').doc(); // ID Baru
-            batch.set(newResRef, newData); // Tambah ke Reservations
+            // Transaksi: batal bila permintaan sudah diproses (dua klik / dua admin) agar tidak jadi duplikat
+            const newResRef = db.collection('reservations').doc();
             const oldReqRef = db.collection('reservation_requests').doc(id);
-            batch.delete(oldReqRef); // Hapus dari Requests
-            
-            await batch.commit();
+            await db.runTransaction(async tx => {
+                const snap = await tx.get(oldReqRef);
+                if (!snap.exists) throw new Error('ALREADY_PROCESSED');
+                tx.set(newResRef, newData);
+                tx.delete(oldReqRef);
+            });
             
             showToast('Berhasil! Data masuk ke kalender.', 'success');
 
         } catch (e) { 
             console.error("Approve Error:", e);
-            showToast(e && e.message === 'INVALID_REQUEST' ? 'Data permintaan tidak valid, periksa isi kartu.' : 'Terjadi kesalahan sistem.', 'error');
+            showToast(e && e.message === 'INVALID_REQUEST' ? 'Data permintaan tidak valid, periksa isi kartu.' : (e && e.message === 'ALREADY_PROCESSED' ? 'Permintaan ini sudah diproses.' : 'Terjadi kesalahan sistem.'), 'error');
         } finally {
             hideLoader();
         }
@@ -733,6 +736,7 @@ function loadReservationsForCurrentMonth() {
 
         snapshot.forEach(doc => {
           const r = { id: doc.id, ...doc.data() };
+          if (typeof r.date !== 'string' || r.date.length < 10) { console.warn('Reservasi tanpa tanggal valid dilewati:', doc.id); return; }
           
           // Masukkan ke Flat List (untuk widget dashboard)
           allReservationsList.push(r);
@@ -756,9 +760,10 @@ function loadReservationsForCurrentMonth() {
         handleAutoOpen();
 
         // 4. Jika user sedang membuka detail tanggal tertentu, refresh list-nya secara realtime
-        if (tanggalDipilih && !hasAutoOpened) {
-            const reservations = dataReservasi[tanggalDipilih] || [];
-            updateReservationList(reservations); // Fungsi ini ada di Bagian 4
+        if (tanggalDipilih) {
+            const q = (document.getElementById('detailSearchInput') || {}).value;
+            if (q) filterReservations(q);
+            else updateReservationList(dataReservasi[tanggalDipilih] || []);
         }
         
         hideLoader();
@@ -777,7 +782,7 @@ function loadReservationsForCurrentMonth() {
  * Menghitung angka-angka statistik di tab "Statistik & Overview" secara otomatis.
  */
 function updateDashboardWidgets(allData) {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateStr();
     
     // --- Widget 1: Tamu Hari Ini ---
     const todayCount = allData.filter(r => r.date === todayStr).length;
@@ -1117,8 +1122,7 @@ function showAddForm() {
         dateInput.value = `${currentYear}-${tanggalDipilih}`;
     } else {
         const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        dateInput.value = now.toISOString().split('T')[0];
+        dateInput.value = localDateStr(now);
     }
 
     // Populate Lokasi
@@ -1215,7 +1219,7 @@ function editReservasi(id) {
   const menuContainer = editFormEl.querySelector('#selected-menus-container');
   menuContainer.innerHTML = ''; 
   if (Array.isArray(res.menus) && res.menus.length > 0) {
-    res.menus.forEach(item => addMenuSelectionRow('edit-reservation-form', item.name, item.quantity));
+    res.menus.forEach(item => addMenuSelectionRow('edit-reservation-form', item.name, item.quantity, item.price));
   } else if (res.menu) {
     addMenuSelectionRow('edit-reservation-form', res.menu, 1);
   } else {
@@ -1255,6 +1259,12 @@ async function simpanPerubahanReservasi() {
   
   showLoader();
   try {
+    // Total tersimpan (orderTotal) jadi basi bila menu berubah -> hapus agar dihitung ulang dari item
+    const before = findReservationById(id);
+    const sig = ms => JSON.stringify((ms || []).map(m => [m.name, m.quantity, typeof m.price === 'number' ? m.price : null]));
+    if (before && typeof before.orderTotal === 'number' && sig(before.menus) !== sig(formData.menus)) {
+      formData.orderTotal = firebase.firestore.FieldValue.delete();
+    }
     await db.collection('reservations').doc(id).update(formData);
     showToast("Perubahan berhasil disimpan.", "success");
     closePopup('editFormPopup');
@@ -1328,7 +1338,11 @@ async function validateAndGetFormData(formId) {
     form.querySelectorAll('.menu-selection-row').forEach(row => {
         const mName = row.querySelector('select').value;
         const mQty = parseInt(row.querySelector('input').value);
-        if(mName && !isNaN(mQty) && mQty > 0) menus.push({ name: mName, quantity: mQty });
+        if(mName && !isNaN(mQty) && mQty > 0) {
+            const item = { name: mName, quantity: mQty };
+            if (row.dataset.price !== undefined) item.price = Number(row.dataset.price);
+            menus.push(item);
+        }
     });
 
     if(!isValid) return null;
@@ -1342,20 +1356,24 @@ async function validateAndGetFormData(formId) {
     };
 }
 
-function addMenuSelectionRow(formId, defaultName='', defaultQty=1) {
+function addMenuSelectionRow(formId, defaultName='', defaultQty=1, defaultPrice) {
   const container = document.querySelector(`#${formId} #selected-menus-container`);
   if (!container) return;
   const div = document.createElement('div');
   div.className = 'menu-selection-row';
   div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
   
-  const optionsHtml = Object.keys(detailMenu).sort().map(name => {
+  // Menu yang tidak ada di master (mis. kustom dari aplikasi lain) tetap harus bisa dipilih agar tidak hilang saat edit
+  const names = Object.keys(detailMenu);
+  if (defaultName && !detailMenu[defaultName]) names.push(defaultName);
+  const optionsHtml = names.sort().map(name => {
       const selected = name === defaultName ? 'selected' : '';
       return `<option value="${escapeHtml(name)}" ${selected}>${escapeHtml(name)}</option>`;
   }).join('');
 
+  if (typeof defaultPrice === 'number') { div.dataset.price = String(defaultPrice); div.dataset.origName = defaultName; }
   div.innerHTML = `
-    <select class="glass-input" style="flex:2;"><option value="">-- Pilih Menu --</option>${optionsHtml}</select>
+    <select class="glass-input" style="flex:2;" onchange="if(this.parentElement.dataset.origName !== this.value) delete this.parentElement.dataset.price"><option value="">-- Pilih Menu --</option>${optionsHtml}</select>
     <input type="number" class="glass-input" style="flex:1; text-align:center;" value="${defaultQty}" min="1" placeholder="Qty">
     <button type="button" class="btn-del" onclick="this.parentElement.remove()" title="Hapus"><i class="fas fa-trash"></i></button>`;
   container.appendChild(div);
@@ -1687,17 +1705,39 @@ function sendPromo(hp, btnEl) {
 /**
  * 18. TOOLS: EXPORT DATA
  */
-function showExportDataPopup() {
-    if (Object.keys(dataReservasi).length === 0) return showToast("Data kosong", "error");
-    const payload = { ver: "6.0", date: new Date().toISOString(), data: dataReservasi, master: locationsData };
-    document.getElementById('export-data-output').value = JSON.stringify(payload, null, 2);
-    document.getElementById('exportDataPopup').style.display = 'block'; overlay.style.display = 'block';
+async function showExportDataPopup() {
+    showLoader();
+    try {
+        const read = async name => (await db.collection(name).get()).docs.map(d => ({ id: d.id, ...d.data() }));
+        const [reservations, requests, menus, locations] = await Promise.all([
+            read('reservations'), read('reservation_requests'), read('menus'), read('locations')
+        ]);
+        const payload = { ver: "7.0", date: new Date().toISOString(),
+            counts: { reservations: reservations.length, requests: requests.length, menus: menus.length, locations: locations.length },
+            reservations, requests, menus, locations };
+        window._backupJson = JSON.stringify(payload, null, 2);
+        document.getElementById('export-data-output').value =
+            'Backup lengkap siap: ' + reservations.length + ' reservasi, ' + requests.length + ' permintaan, ' +
+            menus.length + ' menu, ' + locations.length + ' tempat.\nKlik "Unduh" untuk menyimpan file JSON.';
+        document.getElementById('exportDataPopup').style.display = 'block'; overlay.style.display = 'block';
+    } catch (e) { console.error(e); showToast("Gagal membuat backup.", "error"); }
+    finally { hideLoader(); }
+}
+
+function downloadBackup() {
+    if (!window._backupJson) return showToast("Belum ada data backup", "error");
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([window._backupJson], { type: 'application/json' }));
+    a.download = 'backup-dolan-sawah-' + localDateStr() + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 function copyExportCode() {
-    const el = document.getElementById('export-data-output');
-    el.select(); document.execCommand('copy');
-    showToast("Tersalin ke clipboard!");
+    if (!window._backupJson) return showToast("Belum ada data backup", "error");
+    navigator.clipboard.writeText(window._backupJson).then(
+        () => showToast("Tersalin ke clipboard!"),
+        () => showToast("Gagal menyalin, gunakan Unduh.", "error"));
 }
 
 
@@ -2037,6 +2077,10 @@ function shareViaWhatsApp(type) {
 /**
  * 22. UTILITY HELPER FUNCTIONS (GLOBAL)
  */
+// Tanggal lokal YYYY-MM-DD (toISOString memakai UTC dan salah hari antara 00:00-07:00 WIB)
+function localDateStr(d = new Date()) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 function formatRupiah(amount) {
     if (amount === null || amount === undefined || isNaN(amount)) return '0';
     return Number(amount).toLocaleString('id-ID');
