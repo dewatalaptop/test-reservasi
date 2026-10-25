@@ -833,7 +833,7 @@ function updateDashboardWidgets(allData) {
             recentListContainer.innerHTML = sortedRecent.map(r => `
                 <div class="reservation-list-item" style="padding:10px; border-bottom:1px solid rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center;">
                     <div style="flex:1;">
-                        <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">${escapeHtml(r.nama)}</div>
+                        <div style="font-weight:700; color:var(--text-main); font-size:0.9rem;">${escapeHtml(r.nama)}${r.status === 'batal' ? ' <span class="pill" style="background:#fee2e2;color:#991b1b;">Batal</span>' : ''}</div>
                         <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
                             <i class="far fa-calendar"></i> ${escapeHtml(r.date)} &bull; <i class="far fa-clock"></i> ${escapeHtml(r.jam)}
                         </div>
@@ -1362,7 +1362,8 @@ async function validateAndGetFormData(formId) {
     }
 
     const hpRaw = form.querySelector('#nomorHp').value.trim();
-    if (hpRaw && !isValidPhone(hpRaw)) setError('nomorHp', 'Nomor HP tidak valid');
+    const hpEl = form.querySelector('#nomorHp');
+    if (hpRaw && hpRaw !== hpEl.defaultValue && !isValidPhone(hpRaw)) setError('nomorHp', 'Nomor HP tidak valid');
 
     const menus = [];
     form.querySelectorAll('.menu-selection-row').forEach(row => {
@@ -2175,7 +2176,7 @@ async function doGlobalSearch(q) {
     const hits = globalSearchCache.filter(r =>
         (r.nama && r.nama.toLowerCase().includes(q)) ||
         (r.tempat && r.tempat.toLowerCase().includes(q)) ||
-        (digits.length >= 3 && r.nomorHp && cleanPhoneNumber(r.nomorHp).includes(cleanPhoneNumber(digits))) ||
+        (digits.length >= 3 && r.nomorHp && cleanPhoneNumber(r.nomorHp).includes(digits.startsWith('0') ? '62' + digits.slice(1) : digits)) ||
         (Array.isArray(r.menus) && r.menus.some(m => m.name && m.name.toLowerCase().includes(q))) ||
         (r.menu && r.menu.toLowerCase().includes(q))
     ).sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 50);

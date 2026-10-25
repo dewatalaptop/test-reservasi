@@ -570,3 +570,11 @@ button { font-family: inherit; cursor: pointer; transition: 0.2s; border: none; 
 /* Fokus keyboard terlihat; kartu inbox punya ruang dalam */
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .request-card { padding: 18px; }
+
+/* Header kalender muat di layar sempit (tombol Cari + Hari Ini) */
+.calendar-header-custom { flex-wrap: wrap; gap: 10px; }
+@media (max-width: 480px) {
+  .calendar-wrapper { padding: 15px; }
+  .calendar-header-custom .btn-today .lbl { display: none; }
+  .calendar-header-custom .cal-nav-group { gap: 8px; }
+}
